@@ -23,6 +23,7 @@ const FILES = [
   './src/ui/controls.js',
   './src/ui/screens.js',
   './src/ui/animals.js',
+  './src/ui/animals-pixel.js',
   './src/ui/palettes.js',
   './src/store/storage.js',
   './src/worker/generate.worker.js',

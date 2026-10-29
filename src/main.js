@@ -7,7 +7,8 @@ import { hintFor } from './core/hints.js';
 import { dailySpec, liveStreak, recordDailySolve } from './core/daily.js';
 import { LOSS_MESSAGES, WIN_MESSAGES, fillAnimal, nextMessage } from './messages.js';
 import { KEYS, dumpAll, load, requestPersistence, restoreAll, save } from './store/storage.js';
-import { ANIMALS, DEFAULT_ANIMAL, animalSvg } from './ui/animals.js';
+import { ANIMALS, DEFAULT_ANIMAL, PAW_SVG } from './ui/animals.js';
+import { PIXEL_PAW, PIXEL_SPRITES } from './ui/animals-pixel.js';
 import { DEFAULT_PALETTE, PALETTES, applyPalette } from './ui/palettes.js';
 import { createBoard } from './ui/board.js';
 import { confetti, formatTime, hideEnd, hideHint, showEnd, showHint, showLoading } from './ui/screens.js';
@@ -48,11 +49,23 @@ const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
 function isDark() {
   return settings.theme === 'dark' || (settings.theme === 'auto' && darkQuery.matches);
 }
+// The icon style follows the theme: Valley uses the pixel sprites.
+function pixelLook() {
+  return settings.palette === 'valley';
+}
+function animalSvg(id) {
+  const key = id in ANIMALS ? id : DEFAULT_ANIMAL;
+  return pixelLook() ? PIXEL_SPRITES[key] : ANIMALS[key].svg;
+}
+function pawSvg() {
+  return pixelLook() ? PIXEL_PAW : PAW_SVG;
+}
 function applyLook() {
   document.documentElement.dataset.theme = settings.theme;
   document.documentElement.dataset.palette = settings.palette;
   applyPalette(settings.palette, isDark());
   board.setAnimal(animalSvg(settings.animal));
+  if (current) renderMistakes(game.mistakesLeft(current), current.mistakeLimit, pawSvg());
 }
 darkQuery.addEventListener('change', applyLook);
 
@@ -186,7 +199,7 @@ function render() {
     wrong: game.wrongAnimals(current),
     hint: hintView,
   });
-  renderMistakes(game.mistakesLeft(current), current.mistakeLimit);
+  renderMistakes(game.mistakesLeft(current), current.mistakeLimit, pawSvg());
   setUndoEnabled(current.status === 'playing' && current.history.length > 0);
 }
 

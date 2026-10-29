@@ -1,7 +1,5 @@
 // Bottom bar, timer, mistake marks, subtitle and the menu sheet form.
 
-import { PAW_SVG } from './animals.js';
-
 const $ = (id) => document.getElementById(id);
 
 export function bindBar({ onUndo, onHint, onNew, onMenu }) {
@@ -20,14 +18,14 @@ export function setSubtitle(text) {
 }
 
 // Paw marks: one per allowed mistake, fading as they are spent.
-export function renderMistakes(left, limit) {
+export function renderMistakes(left, limit, pawSvg) {
   const el = $('mistakes');
   if (limit === Infinity) {
     el.innerHTML = '';
     return;
   }
   const parts = [];
-  for (let i = 0; i < limit; i++) parts.push(PAW_SVG.replace('class="paw"', i < left ? 'class="paw"' : 'class="paw spent"'));
+  for (let i = 0; i < limit; i++) parts.push(pawSvg.replace('class="paw"', i < left ? 'class="paw"' : 'class="paw spent"'));
   el.innerHTML = parts.join('');
 }
 

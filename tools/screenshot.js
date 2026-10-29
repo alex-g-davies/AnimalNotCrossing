@@ -51,7 +51,7 @@ const evaluate = async (expression) => (await send('Runtime.evaluate', { express
 
 await send('Emulation.setDeviceMetricsOverride', { width: Number(width), height: Number(height), deviceScaleFactor: 2, mobile: true });
 await send('Page.enable');
-await send('Page.navigate', { url: `http://localhost:8080/?${query}` });
+await send("Page.navigate", { url: query.startsWith("http") ? query : `http://localhost:8080/?${query}` });
 for (let i = 0; i < 200; i++) {
   if ((await evaluate('document.querySelectorAll(".cell").length')) > 0 && (await evaluate('document.getElementById("loading").hidden'))) break;
   await new Promise((r) => setTimeout(r, 100));

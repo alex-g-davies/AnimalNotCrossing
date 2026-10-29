@@ -20,11 +20,11 @@ export const ANIMALS = {
     name: 'dog',
     plural: 'dogs',
     svg: `<svg viewBox="0 0 64 64" aria-hidden="true">
-      <path fill="currentColor" d="M18 18 Q12 10 8 20 Q6 32 14 38 L14 40 A18 18 0 0 0 50 40 L50 38 Q58 32 56 20 Q52 10 46 18 Q32 10 18 18 Z"/>
-      <ellipse cx="25" cy="36" rx="3" ry="3.6" fill="${EYE}"/>
-      <ellipse cx="39" cy="36" rx="3" ry="3.6" fill="${EYE}"/>
-      <ellipse cx="32" cy="45" rx="4" ry="3" fill="${EYE}"/>
-      <path d="M32 48 L32 51 M32 51 Q28 54 25 51 M32 51 Q36 54 39 51" stroke="${EYE}" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <path fill="currentColor" d="M14 14 Q8 8 6 20 Q4 34 12 40 L12 42 A20 18 0 0 0 52 42 L52 40 Q60 34 58 20 Q56 8 50 14 Q32 6 14 14 Z"/>
+      <ellipse cx="25" cy="34" rx="3" ry="3.6" fill="${EYE}"/>
+      <ellipse cx="39" cy="34" rx="3" ry="3.6" fill="${EYE}"/>
+      <ellipse cx="32" cy="44" rx="4.2" ry="3.2" fill="${EYE}"/>
+      <path d="M32 47 L32 50 M32 50 Q28 53 25 50 M32 50 Q36 53 39 50" stroke="${EYE}" stroke-width="1.8" fill="none" stroke-linecap="round"/>
     </svg>`,
   },
   bunny: {
@@ -90,11 +90,13 @@ Object.assign(ANIMALS, {
     name: 'penguin',
     plural: 'penguins',
     svg: `<svg viewBox="0 0 64 64" aria-hidden="true">
-      <path fill="currentColor" d="M32 6 Q50 6 50 30 L50 50 Q50 58 32 58 Q14 58 14 50 L14 30 Q14 6 32 6 Z"/>
-      <path fill="${EYE}" d="M32 22 Q42 22 42 38 L42 50 Q42 54 32 54 Q22 54 22 50 L22 38 Q22 22 32 22 Z"/>
-      <circle cx="26" cy="18" r="2.6" fill="${EYE}"/>
-      <circle cx="38" cy="18" r="2.6" fill="${EYE}"/>
-      <path d="M29 24 L35 24 L32 28 Z" fill="currentColor"/>
+      <path fill="currentColor" d="M32 6 Q48 6 50 26 L52 46 Q52 58 32 58 Q12 58 12 46 L14 26 Q16 6 32 6 Z"/>
+      <path fill="${EYE}" d="M32 26 Q42 26 43 40 L44 50 Q44 54 32 54 Q20 54 20 50 L21 40 Q22 26 32 26 Z"/>
+      <path fill="${EYE}" d="M22 12 Q32 20 42 12 Q38 24 32 24 Q26 24 22 12 Z" opacity="0.001"/>
+      <circle cx="25" cy="17" r="3" fill="${EYE}"/>
+      <circle cx="39" cy="17" r="3" fill="${EYE}"/>
+      <path d="M27 22 L37 22 L32 28 Z" fill="${EYE}"/>
+      <path d="M22 58 L18 62 L30 62 Z M42 58 L46 62 L34 62 Z" fill="currentColor"/>
     </svg>`,
   },
   hedgehog: {
@@ -109,108 +111,51 @@ Object.assign(ANIMALS, {
   },
 });
 
-// Pixel farm animals for the Valley theme: drawn on a 16x16 grid with
-// crisp rects (shape-rendering keeps them sharp when scaled).
-function pixel(rows, fg = 'currentColor', eye = EYE) {
-  const rects = [];
-  rows.forEach((row, y) => {
-    [...row].forEach((ch, x) => {
-      if (ch === '#') rects.push(`<rect x="${x}" y="${y}" width="1" height="1" fill="${fg}"/>`);
-      if (ch === 'o') rects.push(`<rect x="${x}" y="${y}" width="1" height="1" fill="${eye}"/>`);
-    });
-  });
-  return `<svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">${rects.join('')}</svg>`;
-}
 
-export const PIXEL_ANIMALS = {
+// Farm animals in the rounded style, so every species exists in both sets.
+Object.assign(ANIMALS, {
   chicken: {
     name: 'chicken',
     plural: 'chickens',
-    svg: pixel([
-      '......##........',
-      '.....####.......',
-      '.....#o##.......',
-      '....######......',
-      '...###..........',
-      '....######......',
-      '...########.....',
-      '..##########....',
-      '..##########....',
-      '...#########....',
-      '....#######.....',
-      '.....#####......',
-      '......#.#.......',
-      '......#.#.......',
-      '.....##.##......',
-      '................',
-    ]),
+    svg: `<svg viewBox="0 0 64 64" aria-hidden="true">
+      <path fill="currentColor" d="M26 8 Q30 2 34 8 Q38 2 40 10 L38 14 Q44 18 44 26 L52 24 L46 32 L44 36 Q54 40 52 50 Q50 58 36 58 Q14 58 12 44 Q12 30 24 26 Q20 16 26 8 Z"/>
+      <circle cx="33" cy="22" r="2.6" fill="${EYE}"/>
+      <path d="M26 58 L24 63 M38 58 L40 63" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+    </svg>`,
   },
   cow: {
     name: 'cow',
     plural: 'cows',
-    svg: pixel([
-      '..##......##....',
-      '..##......##....',
-      '...########.....',
-      '..##########....',
-      '..#o######o#....',
-      '..##########....',
-      '...########.....',
-      '...#oo##oo#.....',
-      '...########.....',
-      '....######......',
-      '....######......',
-      '....##..##......',
-      '....##..##......',
-      '................',
-      '................',
-      '................',
-    ]),
+    svg: `<svg viewBox="0 0 64 64" aria-hidden="true">
+      <path fill="currentColor" d="M10 12 Q4 10 8 22 L16 24 Q10 30 14 40 Q16 56 32 56 Q48 56 50 40 Q54 30 48 24 L56 22 Q60 10 54 12 L46 18 Q32 10 18 18 Z"/>
+      <ellipse cx="24" cy="30" rx="3" ry="3.4" fill="${EYE}"/>
+      <ellipse cx="40" cy="30" rx="3" ry="3.4" fill="${EYE}"/>
+      <path fill="${EYE}" d="M20 40 Q32 36 44 40 Q46 50 32 50 Q18 50 20 40 Z"/>
+      <circle cx="27" cy="44" r="1.8" fill="currentColor"/>
+      <circle cx="37" cy="44" r="1.8" fill="currentColor"/>
+    </svg>`,
   },
   pig: {
     name: 'pig',
     plural: 'pigs',
-    svg: pixel([
-      '................',
-      '..##......##....',
-      '..###....###....',
-      '..##########....',
-      '.############...',
-      '.###o####o###...',
-      '.############...',
-      '.####oooo####...',
-      '.####o##o####...',
-      '.####oooo####...',
-      '..##########....',
-      '...########.....',
-      '....##..##......',
-      '....##..##......',
-      '................',
-      '................',
-    ]),
+    svg: `<svg viewBox="0 0 64 64" aria-hidden="true">
+      <path fill="currentColor" d="M12 12 L24 18 Q32 14 40 18 L52 12 L50 28 Q56 36 50 46 Q44 56 32 56 Q20 56 14 46 Q8 36 14 28 Z"/>
+      <ellipse cx="23" cy="30" rx="2.8" ry="3.2" fill="${EYE}"/>
+      <ellipse cx="41" cy="30" rx="2.8" ry="3.2" fill="${EYE}"/>
+      <ellipse cx="32" cy="42" rx="9" ry="6" fill="${EYE}"/>
+      <ellipse cx="28.5" cy="42" rx="1.8" ry="2.4" fill="currentColor"/>
+      <ellipse cx="35.5" cy="42" rx="1.8" ry="2.4" fill="currentColor"/>
+    </svg>`,
   },
   sheep: {
     name: 'sheep',
     plural: 'sheep',
-    svg: pixel([
-      '................',
-      '....######......',
-      '..##########....',
-      '.############...',
-      '.############...',
-      '..##########....',
-      '...##oooo##.....',
-      '...##o##o##.....',
-      '...##oooo##.....',
-      '...#oooooo#.....',
-      '....oooooo......',
-      '.....oooo.......',
-      '.....o..o.......',
-      '.....o..o.......',
-      '................',
-      '................',
-    ]),
+    svg: `<svg viewBox="0 0 64 64" aria-hidden="true">
+      <path fill="currentColor" d="M20 14 Q24 6 32 8 Q40 6 44 14 Q54 12 54 22 Q58 28 52 32 Q54 40 46 42 L44 50 Q40 56 32 56 Q24 56 20 50 L18 42 Q10 40 12 32 Q6 28 10 22 Q10 12 20 14 Z"/>
+      <path fill="${EYE}" d="M22 30 Q32 24 42 30 Q46 42 32 48 Q18 42 22 30 Z"/>
+      <circle cx="27" cy="34" r="2.2" fill="currentColor"/>
+      <circle cx="37" cy="34" r="2.2" fill="currentColor"/>
+      <path d="M8 26 Q2 28 6 32 M56 26 Q62 28 58 32" stroke="currentColor" stroke-width="4" stroke-linecap="round" fill="none"/>
+    </svg>`,
   },
-};
-
-Object.assign(ANIMALS, PIXEL_ANIMALS);
+});
