@@ -374,3 +374,11 @@ if (saved && saved.status === 'playing' && saved.puzzle && saved.board) {
 } else {
   startNew();
 }
+
+// Offline: the service worker precaches every file. Registered last so it
+// never delays the first puzzle.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register(new URL('./sw.js', document.baseURI)).catch((error) => console.warn('service worker failed', error));
+  });
+}
