@@ -4,12 +4,13 @@ import { MAX_SIZE, MIN_SIZE } from './core/generator.js';
 import { randomSeed } from './core/rng.js';
 import * as game from './core/game.js';
 import { hintFor } from './core/hints.js';
+import { dailySpec, liveStreak, recordDailySolve } from './core/daily.js';
 import { LOSS_MESSAGES, WIN_MESSAGES, fillAnimal, nextMessage } from './messages.js';
 import { KEYS, dumpAll, load, requestPersistence, restoreAll, save } from './store/storage.js';
 import { ANIMALS, DEFAULT_ANIMAL, animalSvg } from './ui/animals.js';
 import { DEFAULT_PALETTE, PALETTES, applyPalette } from './ui/palettes.js';
 import { createBoard } from './ui/board.js';
-import { formatTime, hideEnd, hideHint, showEnd, showHint, showLoading } from './ui/screens.js';
+import { confetti, formatTime, hideEnd, hideHint, showEnd, showHint, showLoading } from './ui/screens.js';
 import {
   bindBar, bindMenu, closeMenu, createTimer, openMenu, renderMistakes, renderStats, setSubtitle, setUndoEnabled, syncMenu,
 } from './ui/controls.js';
@@ -27,6 +28,11 @@ const DEFAULT_SETTINGS = {
 };
 
 const settings = { ...DEFAULT_SETTINGS, ...(load(KEYS.settings, {}) || {}) };
+
+// Look settings can be previewed from the URL (?palette=valley&animal=cow&theme=dark)
+// without being saved; handy for sharing a look and for screenshots.
+const params = new URLSearchParams(location.search);
+for (const key of ['palette', 'animal', 'theme']) if (params.has(key)) settings[key] = params.get(key);
 let current = null; // game state
 let hint = null; // { tier, data }
 let nextPuzzle = null; // pre-generated { key, puzzle }
@@ -70,9 +76,8 @@ function freshSeed() {
   return seed;
 }
 
-function generate(n, difficulty) {
+function generate(n, difficulty, seed = freshSeed()) {
   const id = nextId++;
-  const seed = freshSeed();
   return new Promise((resolve, reject) => {
     waiting.set(id, { resolve, reject });
     worker.postMessage({ id, n, seed, difficulty });
@@ -127,7 +132,7 @@ function startGame(puzzle, saved = null) {
   hideEnd();
   board.setPuzzle(puzzle, onTap);
   board.setAnimal(animalSvg(settings.animal));
-  setSubtitle(`${puzzle.n} × ${puzzle.n} · ${capital(puzzle.difficulty)}`);
+  setSubtitle(puzzle.daily ? `Daily · ${puzzle.daily}` : `${puzzle.n} × ${puzzle.n} · ${capital(puzzle.difficulty)}`);
   timer.show(settings.timer);
   timer.start(current.elapsedMs);
   render();
@@ -140,6 +145,33 @@ async function startNew() {
   timer.pause();
   const puzzle = await takePuzzle();
   startGame(puzzle);
+}
+
+// Today's puzzle: same board for everyone that day, tracked as a streak.
+async function startDaily() {
+  const spec = dailySpec();
+  closeMenu();
+  if (current && current.puzzle.daily === spec.key) return;
+  timer.pause();
+  showLoading(true);
+  try {
+    const puzzle = await generate(spec.n, spec.difficulty, spec.seed);
+    puzzle.daily = spec.key;
+    startGame(puzzle);
+  } catch (error) {
+    console.error('daily generation failed', error);
+  } finally {
+    showLoading(false);
+  }
+}
+
+function dailyStreakText() {
+  const stats = load(KEYS.stats, {}) || {};
+  const today = dailySpec().key;
+  const live = liveStreak(stats.daily, today);
+  const best = stats.daily ? stats.daily.best : 0;
+  const done = stats.daily && stats.daily.last === today;
+  return `${done ? 'Solved today. ' : ''}Streak: ${live} day${live === 1 ? '' : 's'} · Best: ${best}`;
 }
 
 function render() {
@@ -213,6 +245,7 @@ function finish() {
   cycles[won ? 'win' : 'loss'] = picked.cycle;
   save(KEYS.cycles, cycles);
   if (!won) current = game.reveal(current);
+  else confetti();
   render();
   persist();
   showEnd({
@@ -252,12 +285,13 @@ function recordResult(won) {
     entry.lost++;
   }
   stats[key] = entry;
+  if (won && current.puzzle.daily) stats.daily = recordDailySolve(stats.daily, current.puzzle.daily);
   save(KEYS.stats, stats);
 }
 
 function statsHtml() {
   const stats = load(KEYS.stats, {}) || {};
-  const keys = Object.keys(stats).sort();
+  const keys = Object.keys(stats).filter((k) => k !== 'daily').sort();
   if (!keys.length) return 'No puzzles finished yet.';
   const rows = keys.map((key) => {
     const s = stats[key];
@@ -339,6 +373,7 @@ bindBar({
   onNew: startNew,
   onMenu: () => {
     renderStats(statsHtml());
+    document.getElementById('daily-streak').textContent = dailyStreakText();
     syncMenu(settings);
     openMenu();
   },
@@ -363,6 +398,8 @@ document.addEventListener('visibilitychange', () => {
     timer.resume();
   }
 });
+
+document.getElementById('btn-daily').addEventListener('click', startDaily);
 
 applyLook();
 requestPersistence();

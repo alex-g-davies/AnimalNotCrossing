@@ -35,6 +35,13 @@ Deploy is a push to `main`; GitHub Pages serves the repo root.
 - Typography is the system rounded stack. No bundled fonts.
 - The worker pre-generates the next puzzle while the player solves the current one.
 
+## Tools and quirks
+
+- `node tools/screenshot.js out.png "query" [w] [h] [actions-js]`: phone-size screenshots via headless Chrome and the DevTools protocol (no dependency). Look settings can be forced through URL params (`?palette=valley&animal=cow&theme=dark`).
+- `node tools/make-icons.js` regenerates the PNG icons.
+- The service worker is cache-first: while developing, unregister it or bump `CACHE_VERSION`, or changes will not show.
+- Measured: random region layouts are almost never unique (0% at 10x10+), so the generator repairs layouts with the deduction engine as the objective. Difficulty: easy = levels 1-2, medium = level 3 with few level-3 steps, hard = many. See PERF.md.
+
 ## Layout
 
 ```

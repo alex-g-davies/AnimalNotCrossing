@@ -393,6 +393,7 @@ button.link {
   flex: 1; font: inherit; padding: 10px; border-radius: 12px;
   border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer;
 }
+.note { color: var(--muted); font-size: 0.85rem; margin: 6px 0 0; }
 #stats { font-size: 0.9rem; color: var(--muted); line-height: 1.5; }
 #stats table { width: 100%; border-collapse: collapse; }
 #stats td, #stats th { text-align: left; padding: 3px 0; font-weight: 500; }
@@ -400,4 +401,100 @@ button.link {
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* Larger boards: thinner lines and a touch more icon room. */
+#board[data-n="11"], #board[data-n="12"] { --thin: 1px; --thick: 2px; border-width: 2px; }
+#board[data-n="11"] .cell svg, #board[data-n="12"] .cell svg { width: 82%; height: 82%; }
+#board[data-n="11"] .cell.mark::after, #board[data-n="12"] .cell.mark::after { width: 40%; height: 40%; }
+
+/* Valley: the Stardew-inspired farm look. Pixel edges, chunky lines, a wooden
+   frame around the board and parchment or night-sky backgrounds. */
+html[data-palette="valley"] {
+  --radius: 4px;
+  --cell-radius: 0;
+  --thick: 3px;
+  --font: "Trebuchet MS", "Verdana", ui-rounded, system-ui, sans-serif;
+}
+html[data-palette="valley"] body {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 8px 8px;
+}
+html[data-palette="valley"]:is([data-theme="light"], [data-theme="auto"]) body {
+  --bg: #efe2c0;
+  --card: #f8efd8;
+  --board-thick: #5a3a1e;
+  --board-line: rgba(90, 58, 30, 0.28);
+  --accent: #b8502e;
+  --fg: #3b2a18;
+  --muted: #7d6446;
+}
+@media (prefers-color-scheme: dark) {
+  html[data-palette="valley"][data-theme="auto"] body {
+    --bg: #1b1f2e;
+    --card: #262b3d;
+    --board-thick: #d9c9a3;
+    --board-line: rgba(217, 201, 163, 0.25);
+    --accent: #e39a4a;
+    --fg: #f0e8d6;
+    --muted: #a99f8a;
+  }
+}
+html[data-palette="valley"][data-theme="dark"] body {
+  --bg: #1b1f2e;
+  --card: #262b3d;
+  --board-thick: #d9c9a3;
+  --board-line: rgba(217, 201, 163, 0.25);
+  --accent: #e39a4a;
+  --fg: #f0e8d6;
+  --muted: #a99f8a;
+}
+html[data-palette="valley"] #board {
+  border-radius: 0;
+  border-width: 4px;
+  box-shadow:
+    0 0 0 4px #8a5a2b,
+    0 0 0 7px #5a3a1e,
+    0 10px 24px rgba(0, 0, 0, 0.25);
+  image-rendering: pixelated;
+}
+html[data-palette="valley"] .cell svg { image-rendering: pixelated; width: 80%; height: 80%; }
+html[data-palette="valley"] .cell.mark::after {
+  background:
+    linear-gradient(45deg, transparent 40%, var(--mark) 40%, var(--mark) 60%, transparent 60%),
+    linear-gradient(-45deg, transparent 40%, var(--mark) 40%, var(--mark) 60%, transparent 60%);
+}
+html[data-palette="valley"] .bar-btn, html[data-palette="valley"] .card, html[data-palette="valley"] .sheet select {
+  border-radius: 4px;
+  border-width: 2px;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.18);
+}
+html[data-palette="valley"] button.primary { border-radius: 4px; box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.25); }
+html[data-palette="valley"] #overlay-art svg { animation: hop 0.9s steps(2, end) infinite; }
+@keyframes hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+/* Win confetti: a few falling pieces, cheap and brief. */
+.confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 9;
+}
+.confetti i {
+  position: absolute;
+  top: -12px;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0.9;
+  animation: fall 1.8s ease-in forwards;
+}
+html[data-palette="valley"] .confetti i { border-radius: 0; }
+@keyframes fall {
+  from { transform: translateY(0) rotate(0deg); }
+  to { transform: translateY(105vh) rotate(540deg); opacity: 0.4; }
 }

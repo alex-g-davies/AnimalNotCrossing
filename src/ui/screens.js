@@ -42,3 +42,20 @@ export function formatTime(ms) {
   const s = total % 60;
   return `${m}:${String(s).padStart(2, '0')}`;
 }
+
+// A brief shower of confetti in the region colors. Skipped under reduced motion.
+export function confetti(count = 60) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const layer = document.createElement('div');
+  layer.className = 'confetti';
+  for (let i = 0; i < count; i++) {
+    const piece = document.createElement('i');
+    piece.style.left = `${Math.random() * 100}%`;
+    piece.style.background = `var(--region-${i % 12})`;
+    piece.style.animationDelay = `${Math.random() * 0.6}s`;
+    piece.style.animationDuration = `${1.4 + Math.random() * 0.9}s`;
+    layer.appendChild(piece);
+  }
+  document.body.appendChild(layer);
+  setTimeout(() => layer.remove(), 3000);
+}
