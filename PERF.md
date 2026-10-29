@@ -9,15 +9,27 @@ Every puzzle below was verified by the independent reference solver (exactly one
 
 | Size | Difficulty | Puzzles | Median | p95 | Max | Target (median / p95) | Placements per puzzle | Repair moves per puzzle | Level-3 steps (median / p95) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 6x6 | easy | 20 | 1 ms | 6 ms | 6 ms |  | 1.00 | 100 | 0 / 0 |
-| 6x6 | medium | 20 | 9 ms | 62 ms | 62 ms |  | 2.70 | 341 | 2 / 2 |
-| 6x6 | hard | 20 | 10 ms | 35 ms | 35 ms |  | 2.90 | 289 | 5 / 12 |
-| 7x7 | easy | 20 | 2 ms | 11 ms | 11 ms |  | 1.00 | 231 | 0 / 0 |
-| 7x7 | medium | 20 | 35 ms | 170 ms | 170 ms |  | 3.20 | 822 | 1 / 2 |
-| 7x7 | hard | 20 | 35 ms | 136 ms | 136 ms |  | 3.90 | 787 | 4 / 9 |
-| 8x8 | easy | 20 | 3 ms | 39 ms | 39 ms | 100 / 500 ms met | 1.00 | 442 | 0 / 0 |
-| 8x8 | medium | 20 | 45 ms | 355 ms | 355 ms | 100 / 500 ms met | 3.00 | 1033 | 1 / 2 |
-| 8x8 | hard | 20 | 58 ms | 261 ms | 261 ms | 100 / 500 ms met | 3.35 | 1171 | 4 / 13 |
+| 6x6 | easy | 1000 | 1 ms | 3 ms | 10 ms |  | 1.00 | 92 | 0 / 0 |
+| 6x6 | medium | 1000 | 11 ms | 62 ms | 151 ms |  | 3.48 | 422 | 1 / 2 |
+| 6x6 | hard | 1000 | 9 ms | 44 ms | 133 ms |  | 2.63 | 313 | 4 / 9 |
+| 7x7 | easy | 1000 | 2 ms | 7 ms | 32 ms |  | 1.00 | 192 | 0 / 0 |
+| 7x7 | medium | 1000 | 25 ms | 130 ms | 307 ms |  | 3.18 | 666 | 1 / 2 |
+| 7x7 | hard | 1000 | 24 ms | 123 ms | 268 ms |  | 3.12 | 661 | 5 / 10 |
+| 8x8 | easy | 1000 | 3 ms | 15 ms | 55 ms | 100 / 500 ms met | 1.00 | 338 | 0 / 0 |
+| 8x8 | medium | 1000 | 52 ms | 235 ms | 499 ms | 100 / 500 ms met | 3.13 | 1069 | 1 / 2 |
+| 8x8 | hard | 1000 | 50 ms | 201 ms | 504 ms | 100 / 500 ms met | 2.85 | 958 | 5 / 11 |
+| 9x9 | easy | 1000 | 8 ms | 39 ms | 138 ms |  | 1.01 | 572 | 0 / 0 |
+| 9x9 | medium | 1000 | 91 ms | 433 ms | 1143 ms |  | 2.92 | 1455 | 1 / 2 |
+| 9x9 | hard | 1000 | 94 ms | 423 ms | 845 ms |  | 2.83 | 1449 | 5 / 11 |
+| 10x10 | easy | 1000 | 14 ms | 55 ms | 169 ms | 1000 / 2000 ms met | 1.03 | 842 | 0 / 0 |
+| 10x10 | medium | 1000 | 249 ms | 1199 ms | 3912 ms | 1000 / 2000 ms met | 3.15 | 2353 | 1 / 2 |
+| 10x10 | hard | 1000 | 158 ms | 872 ms | 2985 ms | 1000 / 2000 ms met | 2.52 | 1813 | 5 / 13 |
+| 11x11 | easy | 1000 | 25 ms | 104 ms | 323 ms |  | 1.08 | 1298 | 0 / 0 |
+| 11x11 | medium | 1000 | 357 ms | 1377 ms | 3253 ms |  | 3.17 | 3123 | 1 / 2 |
+| 11x11 | hard | 1000 | 255 ms | 1116 ms | 2982 ms |  | 2.43 | 2352 | 5 / 14 |
+| 12x12 | easy | 1000 | 47 ms | 170 ms | 495 ms | 2000 / 4000 ms met | 1.17 | 1872 | 0 / 0 |
+| 12x12 | medium | 1000 | 759 ms | 3566 ms | 8666 ms | 2000 / 4000 ms met | 3.56 | 4535 | 1 / 2 |
+| 12x12 | hard | 1000 | 450 ms | 1565 ms | 3863 ms | 2000 / 4000 ms met | 2.23 | 2876 | 6 / 15 |
 
 ## Rejections per accepted puzzle
 
@@ -26,14 +38,26 @@ A placement is rejected when repair stalls (unsolved), when a region breaks the 
 | Size | Difficulty | Unsolved | Bad shape | Wrong difficulty |
 | --- | --- | --- | --- | --- |
 | 6x6 | easy | 0.00 | 0.00 | 0.00 |
-| 6x6 | medium | 0.00 | 0.00 | 1.70 |
-| 6x6 | hard | 0.00 | 0.00 | 1.90 |
+| 6x6 | medium | 0.00 | 0.00 | 2.48 |
+| 6x6 | hard | 0.00 | 0.00 | 1.63 |
 | 7x7 | easy | 0.00 | 0.00 | 0.00 |
-| 7x7 | medium | 0.00 | 0.00 | 2.20 |
-| 7x7 | hard | 0.00 | 0.00 | 2.90 |
-| 8x8 | easy | 0.00 | 0.00 | 0.00 |
-| 8x8 | medium | 0.00 | 0.00 | 2.00 |
-| 8x8 | hard | 0.00 | 0.00 | 2.35 |
+| 7x7 | medium | 0.00 | 0.00 | 2.18 |
+| 7x7 | hard | 0.00 | 0.00 | 2.12 |
+| 8x8 | easy | 0.01 | 0.00 | 0.00 |
+| 8x8 | medium | 0.01 | 0.00 | 2.11 |
+| 8x8 | hard | 0.01 | 0.00 | 1.85 |
+| 9x9 | easy | 0.01 | 0.00 | 0.00 |
+| 9x9 | medium | 0.04 | 0.00 | 1.89 |
+| 9x9 | hard | 0.05 | 0.00 | 1.77 |
+| 10x10 | easy | 0.03 | 0.00 | 0.00 |
+| 10x10 | medium | 0.13 | 0.00 | 2.02 |
+| 10x10 | hard | 0.09 | 0.00 | 1.43 |
+| 11x11 | easy | 0.08 | 0.00 | 0.00 |
+| 11x11 | medium | 0.20 | 0.00 | 1.97 |
+| 11x11 | hard | 0.15 | 0.00 | 1.28 |
+| 12x12 | easy | 0.17 | 0.00 | 0.00 |
+| 12x12 | medium | 0.34 | 0.00 | 2.21 |
+| 12x12 | hard | 0.26 | 0.00 | 0.97 |
 
 ## Why the generator repairs instead of retrying
 
@@ -44,6 +68,10 @@ Share of random region layouts (balanced growth around a valid solution) that ha
 | 6x6 | 0.0% |
 | 7x7 | 0.0% |
 | 8x8 | 0.0% |
+| 9x9 | 0.0% |
+| 10x10 | 0.0% |
+| 11x11 | 0.0% |
+| 12x12 | 0.0% |
 
 A plain retry loop would need hundreds to millions of layouts per puzzle. Instead the generator moves single boundary cells between regions and keeps any move that leaves no more cells unresolved by the deduction engine. When nothing is unresolved, the puzzle is both unique and solvable by logic alone.
 
