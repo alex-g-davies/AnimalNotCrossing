@@ -457,8 +457,31 @@ if (saved && saved.status === 'playing' && saved.puzzle && saved.board) {
 
 // Offline: the service worker precaches every file. Registered last so it
 // never delays the first puzzle.
+//
+// Updates: a new worker installs in the background and takes control
+// (skipWaiting + clients.claim in sw.js). The page that is already open would
+// keep running the old modules, and a home-screen app on iOS resumes rather
+// than reloads, so we reload once ourselves when control changes. The game
+// is saved after every move, so nothing is lost. We also check for updates
+// whenever the app returns to the foreground.
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register(new URL('./sw.js', document.baseURI)).catch((error) => console.warn('service worker failed', error));
+  // On the very first visit the worker claims the page too; that is not an update.
+  const hadController = Boolean(navigator.serviceWorker.controller);
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloading || !hadController) return;
+    reloading = true;
+    persist();
+    location.reload();
+  });
+  window.addEventListener('load', async () => {
+    try {
+      const registration = await navigator.serviceWorker.register(new URL('./sw.js', document.baseURI));
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) registration.update().catch(() => {});
+      });
+    } catch (error) {
+      console.warn('service worker failed', error);
+    }
   });
 }
