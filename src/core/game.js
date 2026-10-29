@@ -78,6 +78,24 @@ export function setCell(state, r, c, value) {
   return { ...state, board, history: [...state.history, entry], mistakes, status };
 }
 
+// Drag-painting X marks: sets every listed cell to EMPTY or MARK in one
+// history entry, skipping animals. Used for dragging along a row or column.
+export function setCells(state, cells, value) {
+  if (state.status !== 'playing') return state;
+  if (value !== EMPTY && value !== MARK) return state;
+  const board = state.board.map((row) => row.slice());
+  const group = [];
+  for (const [r, c] of cells) {
+    const before = board[r][c];
+    if (before === ANIMAL || before === value) continue;
+    board[r][c] = value;
+    group.push({ r, c, before });
+  }
+  if (group.length === 0) return state;
+  const entry = { r: group[0].r, c: group[0].c, before: group[0].before, after: value, autoMarked: [], group };
+  return { ...state, board, history: [...state.history, entry] };
+}
+
 export function tap(state, r, c) {
   return setCell(state, r, c, nextValue(state.board[r][c], state.settings.tapMode));
 }
@@ -92,6 +110,7 @@ export function undo(state) {
   const entry = state.history[state.history.length - 1];
   const board = state.board.map((row) => row.slice());
   board[entry.r][entry.c] = entry.before;
+  for (const cell of entry.group || []) board[cell.r][cell.c] = cell.before;
   const n = state.puzzle.n;
   for (const i of entry.autoMarked) board[Math.floor(i / n)][i % n] = EMPTY;
   return { ...state, board, history: state.history.slice(0, -1) };

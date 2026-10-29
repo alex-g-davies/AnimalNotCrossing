@@ -2,7 +2,9 @@
 // set, then updates classes on every render. Knows nothing about game rules.
 //
 // Input: a tap fires `onTap`; pressing and holding for HOLD_MS fires
-// `onHold` (with a filling ring as feedback). Moving the finger cancels.
+// `onHold` (with a filling ring as feedback). Dragging into other cells
+// starts a paint stroke: `onDragStart(r, c)` (return false to refuse), then
+// `onDragEnter(r, c)` for every new cell, then `onDragEnd()`.
 
 import { ANIMAL, MARK } from '../core/rules.js';
 
@@ -12,11 +14,17 @@ const MOVE_TOLERANCE = 10;
 export function createBoard(el) {
   let n = 0;
   let cells = [];
-  let handlers = { onTap: null, onHold: null };
+  let handlers = { onTap: null, onHold: null, onDragStart: null, onDragEnter: null, onDragEnd: null };
   let animalMarkup = '';
 
   // One press at a time.
-  let press = null; // { cell, r, c, x, y, timer, fired }
+  let press = null; // { cell, r, c, x, y, timer, fired, dragging, visited }
+
+  function cellAtPoint(x, y) {
+    const target = document.elementFromPoint(x, y);
+    const cell = target && target.closest ? target.closest('.cell') : null;
+    return cell && el.contains(cell) ? cell : null;
+  }
 
   function cellFrom(event) {
     const cell = event.target.closest('.cell');
@@ -27,8 +35,12 @@ export function createBoard(el) {
     if (!press) return;
     clearTimeout(press.timer);
     press.cell.classList.remove('pressing');
-    const { r, c, fired } = press;
+    const { r, c, fired, dragging } = press;
     press = null;
+    if (dragging) {
+      if (handlers.onDragEnd) handlers.onDragEnd();
+      return;
+    }
     if (!cancelled && !fired && handlers.onTap) handlers.onTap(r, c);
   }
 
@@ -40,7 +52,12 @@ export function createBoard(el) {
     endPress(true);
     const r = Number(cell.dataset.r);
     const c = Number(cell.dataset.c);
-    press = { cell, r, c, x: event.clientX, y: event.clientY, fired: false, timer: 0 };
+    press = { cell, r, c, x: event.clientX, y: event.clientY, fired: false, timer: 0, dragging: false, visited: new Set([r * n + c]) };
+    try {
+      el.setPointerCapture(event.pointerId);
+    } catch {
+      // not available: dragging still works while the pointer stays over the board
+    }
     cell.classList.add('pressing');
     press.timer = setTimeout(() => {
       if (!press || press.cell !== cell) return;
@@ -50,12 +67,34 @@ export function createBoard(el) {
     }, HOLD_MS);
   });
   el.addEventListener('pointermove', (event) => {
-    if (!press) return;
-    if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > MOVE_TOLERANCE) endPress(true);
+    if (!press || press.fired) return;
+    const over = cellAtPoint(event.clientX, event.clientY);
+    const moved = Math.hypot(event.clientX - press.x, event.clientY - press.y) > MOVE_TOLERANCE;
+    if (!press.dragging) {
+      if (!moved) return;
+      clearTimeout(press.timer);
+      press.cell.classList.remove('pressing');
+      if (!over || over === press.cell) {
+        // Wandered without reaching another cell: wait and see.
+        if (!over) endPress(true);
+        return;
+      }
+      if (!handlers.onDragStart || !handlers.onDragStart(press.r, press.c)) {
+        endPress(true);
+        return;
+      }
+      press.dragging = true;
+    }
+    if (!over) return;
+    const r = Number(over.dataset.r);
+    const c = Number(over.dataset.c);
+    const key = r * n + c;
+    if (press.visited.has(key)) return;
+    press.visited.add(key);
+    if (handlers.onDragEnter) handlers.onDragEnter(r, c);
   });
   el.addEventListener('pointerup', () => endPress(false));
   el.addEventListener('pointercancel', () => endPress(true));
-  el.addEventListener('pointerleave', () => endPress(true));
   el.addEventListener('contextmenu', (event) => event.preventDefault());
   // Keyboard: Enter taps, Space holds.
   el.addEventListener('keydown', (event) => {

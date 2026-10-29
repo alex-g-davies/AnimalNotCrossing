@@ -144,7 +144,7 @@ function startGame(puzzle, saved = null) {
   hint = null;
   hideHint();
   hideEnd();
-  board.setPuzzle(puzzle, { onTap, onHold });
+  board.setPuzzle(puzzle, { onTap, onHold, onDragStart, onDragEnter, onDragEnd });
   showTip();
   board.setAnimal(animalSvg(settings.animal));
   setSubtitle(puzzle.daily ? `Daily · ${puzzle.daily}` : `${puzzle.n} × ${puzzle.n} · ${capital(puzzle.difficulty)}`);
@@ -211,6 +211,39 @@ function onHold(r, c) {
   applyMove(game.hold, r, c);
 }
 
+// Drag-painting: the stroke paints X marks if it starts on an empty cell and
+// erases them if it starts on an X. Rebuilt from the pre-drag state on every
+// new cell so the whole stroke is one undo step.
+let drag = null; // { base, cells, value }
+
+function onDragStart(r, c) {
+  if (!current || current.status !== 'playing') return false;
+  const start = current.board[r][c];
+  if (start === 2) return false; // never drag from an animal
+  drag = { base: current, cells: [[r, c]], value: start === 1 ? 0 : 1 };
+  clearHint();
+  hideTip();
+  paintDrag();
+  return true;
+}
+
+function onDragEnter(r, c) {
+  if (!drag) return;
+  drag.cells.push([r, c]);
+  paintDrag();
+}
+
+function paintDrag() {
+  current = game.setCells(drag.base, drag.cells, drag.value);
+  render();
+}
+
+function onDragEnd() {
+  if (!drag) return;
+  drag = null;
+  persist();
+}
+
 function applyMove(move, r, c) {
   if (!current || current.status !== 'playing') return;
   const before = current;
@@ -238,7 +271,7 @@ function showTip() {
   if (settings.tapMode !== 'hold' || (load(KEYS.settings, {}) || {}).tipDone) return;
   const animal = ANIMALS[settings.animal] || ANIMALS[DEFAULT_ANIMAL];
   const tip = document.getElementById('tip');
-  tip.textContent = `Tap a cell for an X. Press and hold to place a ${animal.name}.`;
+  tip.textContent = `Tap for an X, drag to X a whole run. Press and hold to place a ${animal.name}.`;
   tip.hidden = false;
 }
 

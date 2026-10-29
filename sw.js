@@ -2,7 +2,7 @@
 // works with no signal. Change CACHE_VERSION on every deploy (see CLAUDE.md)
 // or players keep the old files.
 
-const CACHE_VERSION = 'anc-v4';
+const CACHE_VERSION = 'anc-v5';
 
 const FILES = [
   './',

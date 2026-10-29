@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generatePuzzle } from '../src/core/generator.js';
 import { ANIMAL, EMPTY, MARK } from '../src/core/rules.js';
-import { conflicts, hold, mistakesLeft, newGame, reveal, setCell, tap, undo, wrongAnimals } from '../src/core/game.js';
+import { conflicts, hold, mistakesLeft, newGame, reveal, setCell, setCells, tap, undo, wrongAnimals } from '../src/core/game.js';
 
 const puzzle = generatePuzzle({ n: 8, seed: 21, difficulty: 'hard' });
 const wrongCell = (r) => (puzzle.solution[r] + 4) % 8;
@@ -112,4 +112,27 @@ test('placing every solution animal wins; auto-mark fills and undoes together', 
   assert.ok(marked >= 7, 'row, column, region and neighbours get X marks');
   t = undo(t);
   assert.equal(t.board.flat().filter((v) => v !== EMPTY).length, 0);
+});
+
+test('drag-painting marks a run of cells, skips animals, and undoes as one step', () => {
+  let s = newGame(puzzle);
+  s = hold(s, 3, puzzle.solution[3]); // an animal in row 3
+  const row = Array.from({ length: 8 }, (_, c) => [3, c]);
+  s = setCells(s, row, MARK);
+  assert.equal(s.board[3].filter((v) => v === MARK).length, 7);
+  assert.equal(s.board[3][puzzle.solution[3]], ANIMAL);
+  assert.equal(s.history.length, 2);
+  // Painting the same value again changes nothing.
+  assert.equal(setCells(s, row, MARK), s);
+  // Erasing a partial run.
+  s = setCells(s, row.slice(0, 3), EMPTY);
+  assert.equal(s.board[3].slice(0, 3).filter((v) => v === MARK).length, 0);
+  s = undo(s);
+  assert.equal(s.board[3].filter((v) => v === MARK).length, 7);
+  s = undo(s);
+  assert.equal(s.board[3].filter((v) => v === MARK).length, 0);
+  assert.equal(s.board[3][puzzle.solution[3]], ANIMAL);
+  // Animals can never be painted.
+  assert.equal(setCells(s, row, ANIMAL), s);
+  assert.equal(s.mistakes, 0);
 });
