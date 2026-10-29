@@ -19,10 +19,7 @@
 <body>
   <div id="app">
     <header id="top">
-      <div id="status-left">
-        <div id="title">Animal Not Crossing</div>
-        <div id="subtitle"></div>
-      </div>
+      <div id="subtitle"></div>
       <div id="status-right">
         <div id="timer" hidden>0:00</div>
         <div id="mistakes" aria-label="mistakes left"></div>
@@ -31,7 +28,10 @@
 
     <main id="board-wrap">
       <div id="board" role="grid" aria-label="puzzle board"></div>
-      <div id="hint-banner" hidden></div>
+      <div id="hint-slot">
+        <div id="hint-banner" hidden></div>
+        <div id="tip" hidden></div>
+      </div>
       <div id="loading" hidden><span class="spinner"></span> Setting up a fresh puzzle</div>
     </main>
 
@@ -86,9 +86,9 @@
       </section>
       <section>
         <h3>Playing</h3>
-        <label>First tap places <select id="set-tap">
-          <option value="mark-first">an X, then the animal</option>
-          <option value="animal-first">the animal, then an X</option>
+        <label>Tapping <select id="set-tap">
+          <option value="hold">toggles an X; hold to place</option>
+          <option value="cycle">cycles X, animal, empty</option>
         </select></label>
         <label class="row"><input id="set-auto-mark" type="checkbox"> Auto-X cells an animal rules out</label>
         <label class="row"><input id="set-relaxed" type="checkbox"> Relaxed: no mistake limit</label>

@@ -18,7 +18,7 @@ import {
 const DEFAULT_SETTINGS = {
   n: 8,
   difficulty: 'medium',
-  tapMode: 'mark-first',
+  tapMode: 'hold',
   autoMark: false,
   relaxed: false,
   timer: false,
@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS = {
 };
 
 const settings = { ...DEFAULT_SETTINGS, ...(load(KEYS.settings, {}) || {}) };
+if (settings.tapMode === 'mark-first' || settings.tapMode === 'animal-first') settings.tapMode = 'hold';
 
 // Look settings can be previewed from the URL (?palette=valley&animal=cow&theme=dark)
 // without being saved; handy for sharing a look and for screenshots.
@@ -130,7 +131,8 @@ function startGame(puzzle, saved = null) {
   hint = null;
   hideHint();
   hideEnd();
-  board.setPuzzle(puzzle, onTap);
+  board.setPuzzle(puzzle, { onTap, onHold });
+  showTip();
   board.setAnimal(animalSvg(settings.animal));
   setSubtitle(puzzle.daily ? `Daily · ${puzzle.daily}` : `${puzzle.n} × ${puzzle.n} · ${capital(puzzle.difficulty)}`);
   timer.show(settings.timer);
@@ -189,10 +191,19 @@ function render() {
 }
 
 function onTap(r, c) {
+  applyMove(game.tap, r, c);
+}
+
+function onHold(r, c) {
+  applyMove(game.hold, r, c);
+}
+
+function applyMove(move, r, c) {
   if (!current || current.status !== 'playing') return;
   const before = current;
-  current = game.tap(current, r, c);
+  current = move(current, r, c);
   if (current === before) return;
+  hideTip();
   const last = current.history[current.history.length - 1];
   if (last && last.mistake) board.shake(r, c);
   clearHint();
@@ -207,6 +218,25 @@ function onUndo() {
   clearHint();
   render();
   persist();
+}
+
+// Shown on the first few puzzles until the player has placed an animal by holding.
+function showTip() {
+  if (settings.tapMode !== 'hold' || (load(KEYS.settings, {}) || {}).tipDone) return;
+  const animal = ANIMALS[settings.animal] || ANIMALS[DEFAULT_ANIMAL];
+  const tip = document.getElementById('tip');
+  tip.textContent = `Tap a cell for an X. Press and hold to place a ${animal.name}.`;
+  tip.hidden = false;
+}
+
+function hideTip() {
+  const tip = document.getElementById('tip');
+  if (tip.hidden) return;
+  if (current && current.history.some((h) => h.after === 2)) {
+    tip.hidden = true;
+    settings.tipDone = true;
+    save(KEYS.settings, settings);
+  }
 }
 
 function clearHint() {

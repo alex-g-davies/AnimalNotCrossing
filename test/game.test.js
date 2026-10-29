@@ -2,26 +2,45 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generatePuzzle } from '../src/core/generator.js';
 import { ANIMAL, EMPTY, MARK } from '../src/core/rules.js';
-import { conflicts, mistakesLeft, newGame, reveal, setCell, tap, undo, wrongAnimals } from '../src/core/game.js';
+import { conflicts, hold, mistakesLeft, newGame, reveal, setCell, tap, undo, wrongAnimals } from '../src/core/game.js';
 
 const puzzle = generatePuzzle({ n: 8, seed: 21, difficulty: 'hard' });
 const wrongCell = (r) => (puzzle.solution[r] + 4) % 8;
 
-test('tap cycles empty, X, animal, empty (and animal-first variant)', () => {
+test('hold mode: tap toggles an X, hold places or removes the animal, X never costs a mistake', () => {
   let s = newGame(puzzle);
   const r = 0;
   const c = puzzle.solution[0];
   s = tap(s, r, c);
   assert.equal(s.board[r][c], MARK);
   s = tap(s, r, c);
+  assert.equal(s.board[r][c], EMPTY);
+  s = hold(s, r, c);
   assert.equal(s.board[r][c], ANIMAL);
   s = tap(s, r, c);
-  assert.equal(s.board[r][c], EMPTY);
-  let t = newGame(puzzle, { tapMode: 'animal-first' });
+  assert.equal(s.board[r][c], EMPTY, 'a tap removes an animal');
+  s = hold(s, r, c);
+  s = hold(s, r, c);
+  assert.equal(s.board[r][c], EMPTY, 'a second hold removes it too');
+  // Clearing an X on a wrong cell: no mistake, ever.
+  const wrong = wrongCell(1);
+  s = tap(s, 1, wrong);
+  s = tap(s, 1, wrong);
+  assert.equal(s.mistakes, 0);
+  s = hold(s, 1, wrong);
+  assert.equal(s.mistakes, 1);
+});
+
+test('cycle mode: tap cycles empty, X, animal, empty', () => {
+  let t = newGame(puzzle, { tapMode: 'cycle' });
+  const r = 0;
+  const c = puzzle.solution[0];
+  t = tap(t, r, c);
+  assert.equal(t.board[r][c], MARK);
   t = tap(t, r, c);
   assert.equal(t.board[r][c], ANIMAL);
   t = tap(t, r, c);
-  assert.equal(t.board[r][c], MARK);
+  assert.equal(t.board[r][c], EMPTY);
 });
 
 test('undo restores the previous cell and is a no-op on an empty history', () => {

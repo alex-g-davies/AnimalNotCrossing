@@ -56,7 +56,7 @@ for (let i = 0; i < 200; i++) {
   if ((await evaluate('document.querySelectorAll(".cell").length')) > 0 && (await evaluate('document.getElementById("loading").hidden'))) break;
   await new Promise((r) => setTimeout(r, 100));
 }
-if (actions) await evaluate(`(async () => { ${actions} })()`);
+if (actions) console.log("actions:", JSON.stringify(await evaluate(`(async () => { ${actions} })()`)));
 await new Promise((r) => setTimeout(r, 400));
 const shot = await send('Page.captureScreenshot', { format: 'png' });
 writeFileSync(out, Buffer.from(shot.result.data, 'base64'));

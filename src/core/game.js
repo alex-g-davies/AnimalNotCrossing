@@ -12,7 +12,9 @@ import { ANIMAL, EMPTY, MARK, emptyBoard, findConflicts, isSolved } from './rule
 export const MISTAKE_LIMITS = { easy: 5, medium: 4, hard: 3 };
 
 export const DEFAULT_SETTINGS = {
-  tapMode: 'mark-first', // or 'animal-first'
+  // 'hold': tap toggles an X, press-and-hold places the animal (default).
+  // 'cycle': tap cycles empty -> X -> animal -> empty.
+  tapMode: 'hold',
   autoMark: false, // placing an animal X-es out every cell it rules out
   relaxed: false, // no mistake limit
 };
@@ -33,8 +35,12 @@ export function newGame(puzzle, settings = {}) {
 }
 
 function nextValue(current, tapMode) {
-  const cycle = tapMode === 'animal-first' ? [EMPTY, ANIMAL, MARK] : [EMPTY, MARK, ANIMAL];
-  return cycle[(cycle.indexOf(current) + 1) % cycle.length];
+  if (tapMode === 'cycle') {
+    const cycle = [EMPTY, MARK, ANIMAL];
+    return cycle[(cycle.indexOf(current) + 1) % cycle.length];
+  }
+  // hold mode: a tap never places an animal, so clearing an X can never cost a mistake.
+  return current === EMPTY ? MARK : EMPTY;
 }
 
 export function setCell(state, r, c, value) {
@@ -74,6 +80,11 @@ export function setCell(state, r, c, value) {
 
 export function tap(state, r, c) {
   return setCell(state, r, c, nextValue(state.board[r][c], state.settings.tapMode));
+}
+
+// Press-and-hold: places the animal, or removes one that is already there.
+export function hold(state, r, c) {
+  return setCell(state, r, c, state.board[r][c] === ANIMAL ? EMPTY : ANIMAL);
 }
 
 export function undo(state) {

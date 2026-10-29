@@ -1,23 +1,76 @@
-// Board rendering and taps. Builds one button per cell when a puzzle is set,
-// then updates classes on every render. Knows nothing about game rules.
+// Board rendering and input. Builds one button per cell when a puzzle is
+// set, then updates classes on every render. Knows nothing about game rules.
+//
+// Input: a tap fires `onTap`; pressing and holding for HOLD_MS fires
+// `onHold` (with a filling ring as feedback). Moving the finger cancels.
 
 import { ANIMAL, MARK } from '../core/rules.js';
+
+export const HOLD_MS = 380;
+const MOVE_TOLERANCE = 10;
 
 export function createBoard(el) {
   let n = 0;
   let cells = [];
-  let onTap = null;
+  let handlers = { onTap: null, onHold: null };
   let animalMarkup = '';
 
-  el.addEventListener('click', (event) => {
+  // One press at a time.
+  let press = null; // { cell, r, c, x, y, timer, fired }
+
+  function cellFrom(event) {
     const cell = event.target.closest('.cell');
-    if (!cell || !onTap) return;
-    onTap(Number(cell.dataset.r), Number(cell.dataset.c));
+    return cell && el.contains(cell) ? cell : null;
+  }
+
+  function endPress(cancelled) {
+    if (!press) return;
+    clearTimeout(press.timer);
+    press.cell.classList.remove('pressing');
+    const { r, c, fired } = press;
+    press = null;
+    if (!cancelled && !fired && handlers.onTap) handlers.onTap(r, c);
+  }
+
+  el.addEventListener('pointerdown', (event) => {
+    if (!event.isPrimary || event.button !== 0) return;
+    const cell = cellFrom(event);
+    if (!cell) return;
+    event.preventDefault();
+    endPress(true);
+    const r = Number(cell.dataset.r);
+    const c = Number(cell.dataset.c);
+    press = { cell, r, c, x: event.clientX, y: event.clientY, fired: false, timer: 0 };
+    cell.classList.add('pressing');
+    press.timer = setTimeout(() => {
+      if (!press || press.cell !== cell) return;
+      press.fired = true;
+      cell.classList.remove('pressing');
+      if (handlers.onHold) handlers.onHold(r, c);
+    }, HOLD_MS);
+  });
+  el.addEventListener('pointermove', (event) => {
+    if (!press) return;
+    if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > MOVE_TOLERANCE) endPress(true);
+  });
+  el.addEventListener('pointerup', () => endPress(false));
+  el.addEventListener('pointercancel', () => endPress(true));
+  el.addEventListener('pointerleave', () => endPress(true));
+  el.addEventListener('contextmenu', (event) => event.preventDefault());
+  // Keyboard: Enter taps, Space holds.
+  el.addEventListener('keydown', (event) => {
+    const cell = cellFrom(event);
+    if (!cell) return;
+    if (event.key === 'Enter' && handlers.onTap) handlers.onTap(Number(cell.dataset.r), Number(cell.dataset.c));
+    if (event.key === ' ' && handlers.onHold) {
+      event.preventDefault();
+      handlers.onHold(Number(cell.dataset.r), Number(cell.dataset.c));
+    }
   });
 
-  function setPuzzle(puzzle, handler) {
+  function setPuzzle(puzzle, newHandlers) {
     n = puzzle.n;
-    onTap = handler;
+    handlers = { ...handlers, ...newHandlers };
     el.style.setProperty('--n', n);
     el.dataset.n = n;
     el.innerHTML = '';
@@ -31,10 +84,10 @@ export function createBoard(el) {
         cell.dataset.r = r;
         cell.dataset.c = c;
         cell.setAttribute('role', 'gridcell');
-        cell.setAttribute('aria-label', `row ${r + 1} column ${c + 1}`);
         cell.style.setProperty('--region-color', `var(--region-${regions[r][c]})`);
         if (c < n - 1 && regions[r][c + 1] !== regions[r][c]) cell.classList.add('b-right');
         if (r < n - 1 && regions[r + 1][c] !== regions[r][c]) cell.classList.add('b-bottom');
+        cell.innerHTML = '<span class="icon"></span>';
         el.appendChild(cell);
         cells.push(cell);
       }
@@ -43,7 +96,7 @@ export function createBoard(el) {
 
   function setAnimal(svg) {
     animalMarkup = svg;
-    for (const cell of cells) if (cell.classList.contains('animal')) cell.innerHTML = animalMarkup;
+    for (const cell of cells) if (cell.classList.contains('animal')) cell.querySelector('.icon').innerHTML = animalMarkup;
   }
 
   // view: { board, conflicts: Set, wrong: number[], hint: { area, move } | null }
@@ -64,10 +117,10 @@ export function createBoard(el) {
       cell.classList.toggle('mark', value === MARK);
       cell.classList.toggle('animal', value === ANIMAL);
       if (value === ANIMAL && !wasAnimal) {
-        cell.innerHTML = animalMarkup;
+        cell.querySelector('.icon').innerHTML = animalMarkup;
         cell.classList.add('placed');
       } else if (value !== ANIMAL && wasAnimal) {
-        cell.innerHTML = '';
+        cell.querySelector('.icon').innerHTML = '';
         cell.classList.remove('placed');
       }
       cell.classList.toggle('conflict', view.conflicts ? view.conflicts.has(i) : false);
