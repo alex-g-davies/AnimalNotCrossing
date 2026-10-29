@@ -4,7 +4,7 @@ A free, ad-free, offline logic puzzle for one player, installed on an iPhone as 
 Place one animal in every row, column and colored region, with no two animals touching, even diagonally.
 Every puzzle has exactly one solution and can be solved by deduction alone.
 
-Static files only: no backend, accounts, analytics, ads, dependencies or build step.
+Static files only (plus one locally bundled open-licence font for the Valley theme): no backend, accounts, analytics, ads, dependencies or build step.
 
 ## Run locally
 

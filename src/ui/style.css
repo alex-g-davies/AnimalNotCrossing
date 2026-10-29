@@ -1,5 +1,14 @@
 /* Animal Not Crossing: one board, a few buttons, calm colors. */
 
+/* Pixelify Sans (SIL Open Font License 1.1, see fonts/PixelifySans-OFL.txt).
+   Used only by the Valley theme; loaded locally so offline play never breaks. */
+@font-face {
+  font-family: "Pixelify Sans";
+  src: url("../../fonts/PixelifySans.ttf") format("truetype");
+  font-weight: 400 700;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light dark;
   --font: ui-rounded, -apple-system, "SF Pro Rounded", "Segoe UI", system-ui, sans-serif;
@@ -477,8 +486,13 @@ html[data-palette="valley"] {
   --radius: 4px;
   --cell-radius: 0;
   --thick: 3px;
-  --font: "Trebuchet MS", "Verdana", ui-rounded, system-ui, sans-serif;
+  --font: "Pixelify Sans", "Trebuchet MS", "Verdana", system-ui, sans-serif;
 }
+html[data-palette="valley"] body { font-size: 1.05rem; }
+html[data-palette="valley"] #subtitle { font-size: 1.05rem; letter-spacing: 0.03em; }
+html[data-palette="valley"] .bar-btn { font-size: 0.85rem; }
+html[data-palette="valley"] .card h2 { font-size: 1.5rem; }
+html[data-palette="valley"] #overlay-message { font-size: 1.2rem; }
 html[data-palette="valley"] body {
   background-color: var(--bg);
   background-image:

@@ -2,7 +2,7 @@
 // works with no signal. Change CACHE_VERSION on every deploy (see CLAUDE.md)
 // or players keep the old files.
 
-const CACHE_VERSION = 'anc-v2';
+const CACHE_VERSION = 'anc-v3';
 
 const FILES = [
   './',
@@ -27,6 +27,7 @@ const FILES = [
   './src/ui/palettes.js',
   './src/store/storage.js',
   './src/worker/generate.worker.js',
+  './fonts/PixelifySans.ttf',
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
