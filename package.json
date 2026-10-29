@@ -1,0 +1,15 @@
+{
+  "name": "animal-not-crossing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ad-free, offline Star Battle style puzzle PWA. No dependencies, no build step.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/",
+    "bench": "node test/uniqueness.bench.js",
+    "serve": "node tools/serve.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
