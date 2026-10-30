@@ -2,7 +2,7 @@
 // works with no signal. Change CACHE_VERSION on every deploy (see CLAUDE.md)
 // or players keep the old files.
 
-const CACHE_VERSION = 'anc-v6';
+const CACHE_VERSION = 'anc-v7';
 
 const FILES = [
   './',
@@ -21,6 +21,7 @@ const FILES = [
   './src/core/daily.js',
   './src/core/spec.js',
   './src/core/stats.js',
+  './src/core/climb.js',
   './src/ui/style.css',
   './src/ui/board.js',
   './src/ui/controls.js',

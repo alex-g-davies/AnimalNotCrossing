@@ -2,12 +2,13 @@
 
 import { RANDOM, SIZES, resolveChoice, resolveSpec, specMatches } from './core/spec.js';
 import { comboKeys, recordAbandon, recordResult as recordStats, streaks } from './core/stats.js';
+import { clearStage, newRun, recordRun, stageSpec } from './core/climb.js';
 import { randomSeed } from './core/rng.js';
 import * as game from './core/game.js';
 import { hintFor } from './core/hints.js';
 import { dailySpec, liveStreak, recordDailySolve } from './core/daily.js';
 import { LOSS_MESSAGES, WIN_MESSAGES, fillAnimal, nextMessage } from './messages.js';
-import { KEYS, dumpAll, load, requestPersistence, restoreAll, save } from './store/storage.js';
+import { KEYS, dumpAll, load, remove, requestPersistence, restoreAll, save } from './store/storage.js';
 import { ANIMALS, DEFAULT_ANIMAL, PAW_SVG } from './ui/animals.js';
 import { PIXEL_PAW, PIXEL_SPRITES } from './ui/animals-pixel.js';
 import { DEFAULT_PALETTE, PALETTES, applyPalette } from './ui/palettes.js';
@@ -40,6 +41,9 @@ let current = null; // game state
 let hint = null; // { tier, data }
 let nextPuzzle = null; // a pre-generated puzzle waiting for "New"
 let pending = null; // { n, difficulty, promise } while one is being generated
+let climb = load(KEYS.climb) || null; // active climb run { stage, totalMs }
+let climbNext = null; // { stage, puzzle } pre-generated for the next stage
+let climbPending = null; // stage number being generated
 
 const board = createBoard(document.getElementById('board'));
 const timer = createTimer(document.getElementById('timer'), formatTime);
@@ -163,24 +167,47 @@ function gameSettings() {
 }
 
 function startGame(puzzle, saved = null) {
-  current = saved || { ...game.newGame(puzzle, gameSettings()), look: pickLook() };
+  if (saved) current = saved;
+  else {
+    // Climb stages ignore the relaxed setting and run against the clock.
+    const forGame = puzzle.climb ? { ...gameSettings(), relaxed: false } : gameSettings();
+    current = { ...game.newGame(puzzle, forGame), look: pickLook() };
+    if (puzzle.climb) current.timeLimitMs = stageSpec(puzzle.climb).timeLimitMs;
+  }
   hint = null;
   hideHint();
   hideEnd();
   board.setPuzzle(puzzle, { onTap, onHold, onDragStart, onDragEnter, onDragEnd });
   showTip();
   applyLook();
-  setSubtitle(puzzle.daily ? `Daily · ${puzzle.daily}` : `${puzzle.n} × ${puzzle.n} · ${capital(puzzle.difficulty)}`);
-  timer.show(settings.timer);
-  timer.start(current.elapsedMs);
+  setSubtitle(subtitleFor(puzzle));
+  timer.show(settings.timer || Boolean(puzzle.climb));
+  timer.start(current.elapsedMs, puzzle.climb ? { limitMs: current.timeLimitMs, onExpire } : {});
   render();
   rememberSeed(puzzle.seed);
   persist();
-  prepareNext();
+  if (puzzle.climb) prepareClimbNext(puzzle.climb + 1);
+  else prepareNext();
 }
 
-// Walking away from a puzzle after making a move ends the win streak.
+function subtitleFor(puzzle) {
+  if (puzzle.daily) return `Daily · ${puzzle.daily}`;
+  const base = `${puzzle.n} × ${puzzle.n} · ${capital(puzzle.difficulty)}`;
+  return puzzle.climb ? `Stage ${puzzle.climb} · ${base}` : base;
+}
+
+function onExpire() {
+  if (!current || current.status !== 'playing') return;
+  current = game.timeOut(current);
+  render();
+  persist();
+  finish();
+}
+
+// Walking away from a puzzle after making a move ends the win streak, and
+// walking away from a climb ends the run.
 function leaveCurrent() {
+  if (current && current.puzzle.climb) endClimbRun();
   if (!current || current.status !== 'playing' || current.history.length === 0) return;
   save(KEYS.stats, recordAbandon(load(KEYS.stats, {}) || {}, current.puzzle));
 }
@@ -190,6 +217,70 @@ async function startNew() {
   leaveCurrent();
   const puzzle = await takePuzzle();
   startGame(puzzle);
+}
+
+// --- Climb mode ------------------------------------------------------------
+
+async function startClimb() {
+  closeMenu();
+  if (climb && current && current.puzzle.climb === climb.stage && current.status === 'playing') return;
+  timer.pause();
+  leaveCurrent();
+  climb = newRun();
+  save(KEYS.climb, climb);
+  await startClimbStage();
+}
+
+async function startClimbStage() {
+  if (!climb) return;
+  const spec = stageSpec(climb.stage);
+  let puzzle;
+  if (climbNext && climbNext.stage === climb.stage) puzzle = climbNext.puzzle;
+  else {
+    showLoading(true);
+    try {
+      puzzle = await generate(spec.n, spec.difficulty);
+    } catch (error) {
+      console.error('climb generation failed', error);
+      return;
+    } finally {
+      showLoading(false);
+    }
+  }
+  climbNext = null;
+  puzzle.climb = climb.stage;
+  startGame(puzzle);
+}
+
+async function prepareClimbNext(stage) {
+  if ((climbNext && climbNext.stage === stage) || climbPending === stage) return;
+  climbPending = stage;
+  const spec = stageSpec(stage);
+  try {
+    const puzzle = await generate(spec.n, spec.difficulty);
+    if (climbPending === stage) climbNext = { stage, puzzle };
+  } catch (error) {
+    console.error('climb generation failed', error);
+  } finally {
+    if (climbPending === stage) climbPending = null;
+  }
+}
+
+// The run is over: failed, timed out, or walked away from.
+function endClimbRun() {
+  if (!climb) return;
+  const stats = load(KEYS.stats, {}) || {};
+  save(KEYS.stats, { ...stats, climb: recordRun(stats.climb, climb) });
+  climb = null;
+  climbNext = null;
+  remove(KEYS.climb);
+}
+
+function climbText() {
+  const c = (load(KEYS.stats, {}) || {}).climb;
+  const live = climb ? `On stage ${climb.stage} now. ` : '';
+  if (!c) return `${live}Puzzles get bigger and harder, each against the clock. How far can you get?`;
+  return `${live}Best: stage ${c.bestStage} · ${c.runs} run${c.runs === 1 ? '' : 's'}`;
 }
 
 // Today's puzzle: same board for everyone that day, tracked as a streak.
@@ -217,7 +308,7 @@ function dailyStreakText() {
   const live = liveStreak(stats.daily, today);
   const best = stats.daily ? stats.daily.best : 0;
   const done = stats.daily && stats.daily.last === today;
-  return `${done ? 'Solved today. ' : ''}Streak: ${live} day${live === 1 ? '' : 's'} · Best: ${best}`;
+  return `${done ? 'Solved today. ' : ''}Daily streak: ${live} day${live === 1 ? '' : 's'} · Best: ${best}`;
 }
 
 function render() {
@@ -355,13 +446,48 @@ function finish() {
   else confetti();
   render();
   persist();
+  const message = fillAnimal(picked.message, animal.name, animal.plural);
+  if (current.puzzle.climb && climb) return finishClimb(won, message);
   showEnd({
     status: current.status,
     title: won ? 'Solved!' : 'Out of paws',
-    message: fillAnimal(picked.message, animal.name, animal.plural),
+    message,
     timeText: won ? `Time: ${formatTime(current.elapsedMs)} · Streak: ${streak}` : 'Here is how it fits together.',
     artSvg: animalSvg(),
     onNext: startNew,
+    onLook: () => hideEnd(),
+  });
+}
+
+function finishClimb(won, message) {
+  const stage = current.puzzle.climb;
+  if (won) {
+    climb = clearStage(climb, current.elapsedMs);
+    save(KEYS.climb, climb);
+    const next = stageSpec(climb.stage);
+    showEnd({
+      status: 'won',
+      title: `Stage ${stage} cleared!`,
+      message,
+      timeText: `Time: ${formatTime(current.elapsedMs)} · Next: ${next.n} × ${next.n} ${capital(next.difficulty)} in ${formatTime(next.timeLimitMs)}`,
+      artSvg: animalSvg(),
+      nextLabel: 'Next stage',
+      onNext: startClimbStage,
+      onLook: () => hideEnd(),
+    });
+    return;
+  }
+  const reached = climb.stage;
+  endClimbRun();
+  const best = ((load(KEYS.stats, {}) || {}).climb || {}).bestStage || reached;
+  showEnd({
+    status: 'lost',
+    title: current.lostBy === 'time' ? 'Time is up' : 'Out of paws',
+    message,
+    timeText: `You reached stage ${reached} · Best: stage ${best}`,
+    artSvg: animalSvg(),
+    nextLabel: 'Climb again',
+    onNext: startClimb,
     onLook: () => hideEnd(),
   });
 }
@@ -400,7 +526,9 @@ function statsHtml() {
     const [n, difficulty] = key.split('-');
     return `<div class="stat"><b>${n} × ${n} · ${capital(difficulty)}</b><span>${s.solved} solved · ${s.lost} lost · best ${fmt(s.best)} · median ${fmt(median)} · streak ${s.streak || 0}, best ${s.bestStreak || 0}</span></div>`;
   });
-  return `<div class="stat"><b>Win streak: ${overall.streak}</b><span>Best: ${overall.bestStreak}. A loss, or leaving a puzzle after a move, ends it.</span></div>${rows.join('')}`;
+  const c = stats.climb;
+  const climbRow = c ? `<div class="stat"><b>Climb: stage ${c.bestStage}</b><span>best run · ${c.runs} run${c.runs === 1 ? '' : 's'} · ${fmt(c.bestStageMs)} to get there</span></div>` : '';
+  return `<div class="stat"><b>Win streak: ${overall.streak}</b><span>Best: ${overall.bestStreak}. A loss, or leaving a puzzle after a move, ends it.</span></div>${climbRow}${rows.join('')}`;
 }
 
 function exportData() {
@@ -447,11 +575,11 @@ function onSettingChange(key, value) {
     persist();
   }
   if (key === 'theme' || key === 'palette' || key === 'animal') applyLook();
-  if (key === 'timer') timer.show(value);
+  if (key === 'timer') timer.show(value || Boolean(current && current.puzzle.climb));
   if ((key === 'tapMode' || key === 'autoMark' || key === 'relaxed') && current) {
     current = { ...current, settings: { ...current.settings, ...gameSettings() } };
     if (key === 'relaxed') {
-      const limit = value ? Infinity : game.MISTAKE_LIMITS[current.puzzle.difficulty];
+      const limit = value && !current.puzzle.climb ? Infinity : game.MISTAKE_LIMITS[current.puzzle.difficulty];
       current = { ...current, mistakeLimit: limit };
       if (current.status === 'playing' && current.mistakes >= limit) current = { ...current, status: 'lost' };
     }
@@ -478,6 +606,8 @@ bindBar({
   onMenu: () => {
     renderStats(statsHtml());
     document.getElementById('daily-streak').textContent = dailyStreakText();
+    document.getElementById('climb-note').textContent = climbText();
+    document.getElementById('btn-climb').textContent = climb ? 'Continue the climb' : 'Start a climb';
     syncMenu(settings);
     openMenu();
   },
@@ -504,6 +634,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 document.getElementById('btn-daily').addEventListener('click', startDaily);
+document.getElementById('btn-climb').addEventListener('click', startClimb);
 
 applyLook();
 requestPersistence();
@@ -511,7 +642,10 @@ requestPersistence();
 const saved = load(KEYS.game);
 if (saved && saved.status === 'playing' && saved.puzzle && saved.board) {
   // JSON turns Infinity into null; restore it for relaxed games.
+  if (saved.puzzle.climb && !climb) climb = { stage: saved.puzzle.climb, totalMs: 0 };
   startGame(saved.puzzle, { ...saved, mistakeLimit: saved.mistakeLimit === null ? Infinity : saved.mistakeLimit });
+} else if (climb) {
+  startClimbStage(); // closed between stages
 } else {
   startNew();
 }

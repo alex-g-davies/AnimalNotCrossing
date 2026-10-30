@@ -31,6 +31,7 @@ The look can be previewed from the URL without saving it: `?palette=valley&anima
 - `src/core/techniques.js` is that deduction engine (levels 1 to 3, plus an optional lookahead level 4). It also grades difficulty and powers hints.
 - `src/core/solver.js` is a fast counting solver used as a second proof of uniqueness; `test/reference-solver.js` is a third, deliberately different one used only by tests and the bench.
 - `src/core/game.js` holds the game state as pure functions: taps, undo, mistakes, win and loss.
+- `src/core/climb.js` is climb mode: a ladder from 6×6 easy to 12×12 hard, each stage against a countdown, until a loss or the clock ends the run. `src/core/stats.js` keeps win streaks; `src/core/spec.js` resolves the "random" size, difficulty, animal and colour settings once per puzzle.
 - `src/messages.js` holds the messages shown after every game. Edit them freely.
 - Generation runs in a Web Worker and the next puzzle is prepared while the current one is being solved.
 

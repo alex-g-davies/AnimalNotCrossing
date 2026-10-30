@@ -150,3 +150,9 @@ export function reveal(state) {
 export function mistakesLeft(state) {
   return state.mistakeLimit === Infinity ? Infinity : Math.max(0, state.mistakeLimit - state.mistakes);
 }
+
+// Climb mode: the countdown ran out. Counts as a loss; `lostBy` says why.
+export function timeOut(state) {
+  if (state.status !== 'playing') return state;
+  return { ...state, status: 'lost', lostBy: 'time' };
+}

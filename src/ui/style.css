@@ -134,6 +134,7 @@ body {
   gap: 12px;
 }
 
+#timer.low { color: var(--danger); font-weight: 700; }
 #timer {
   font-variant-numeric: tabular-nums;
   color: var(--muted);

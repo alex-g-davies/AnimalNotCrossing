@@ -32,6 +32,7 @@ Deploy is a push to `main`; GitHub Pages serves the repo root.
 - **Themes and animals.** Multiple animal icon sets, several region palettes, light and dark. One theme, "Valley", is a Stardew Valley homage in style only: pixel art, farm palette, farm animals. Never include Stardew's name, sprites, characters or sounds.
 - **Name** is "Animal Not Crossing" (private pun). Rename before any public release.
 - "Cat" in the guide means "animal" in code; the chosen animal name is substituted into copy.
+- **Issue #1 feedback (Oct 30, 2026).** Size, difficulty, animal and colours each accept "random", picked once per puzzle (`src/core/spec.js`). Win streaks overall and per combination (`src/core/stats.js`); a loss or leaving a started puzzle ends one. **Climb mode** (`src/core/climb.js`): ladder 6×6 easy to 12×12 hard, countdown of 5 s per cell shrinking 15% a stage past the ladder, normal mistake limits, relaxed ignored. Cuter icon sets are the remaining item.
 - Typography is the system rounded stack. No bundled fonts.
 - The worker pre-generates the next puzzle while the player solves the current one.
 
@@ -47,7 +48,7 @@ Deploy is a push to `main`; GitHub Pages serves the repo root.
 ```
 index.html  manifest.webmanifest  sw.js  icons/
 src/main.js            wiring, screens, owns game state
-src/core/              rng, rules, solver, generator, techniques, difficulty, hints, game, daily, spec, stats
+src/core/              rng, rules, solver, generator, techniques, difficulty, hints, game, daily, spec, stats, climb
 src/ui/                board, controls, screens, animals, themes, palettes, style.css
 src/store/storage.js   localStorage wrapper, every access in try/catch
 src/worker/            generate.worker.js

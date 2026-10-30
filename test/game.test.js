@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generatePuzzle } from '../src/core/generator.js';
 import { ANIMAL, EMPTY, MARK } from '../src/core/rules.js';
-import { conflicts, hold, mistakesLeft, newGame, reveal, setCell, setCells, tap, undo, wrongAnimals } from '../src/core/game.js';
+import { conflicts, hold, mistakesLeft, newGame, reveal, setCell, setCells, tap, timeOut, undo, wrongAnimals } from '../src/core/game.js';
 
 const puzzle = generatePuzzle({ n: 8, seed: 21, difficulty: 'hard' });
 const wrongCell = (r) => (puzzle.solution[r] + 4) % 8;
@@ -135,4 +135,14 @@ test('drag-painting marks a run of cells, skips animals, and undoes as one step'
   // Animals can never be painted.
   assert.equal(setCells(s, row, ANIMAL), s);
   assert.equal(s.mistakes, 0);
+});
+
+test('running out of time loses the game once and leaves finished games alone', () => {
+  const puzzle = generatePuzzle({ n: 6, seed: 11, difficulty: 'easy' });
+  let state = newGame(puzzle);
+  state = timeOut(state);
+  assert.equal(state.status, 'lost');
+  assert.equal(state.lostBy, 'time');
+  assert.equal(timeOut(state), state);
+  assert.equal(tap(state, 0, 0), state);
 });

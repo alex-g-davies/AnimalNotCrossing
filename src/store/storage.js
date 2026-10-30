@@ -9,6 +9,7 @@ export const KEYS = {
   stats: 'stats',
   seeds: 'seeds',
   cycles: 'cycles',
+  climb: 'climb',
   next: 'next',
 };
 

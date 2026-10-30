@@ -29,37 +29,58 @@ export function renderMistakes(left, limit, pawSvg) {
   el.innerHTML = parts.join('');
 }
 
+// Counts up, or counts down when started with a limit (climb mode), calling
+// onExpire once when the time runs out.
 export function createTimer(el, format) {
   let base = 0; // elapsed ms accumulated before the current run
   let startedAt = null;
   let handle = null;
+  let limit = null;
+  let onExpire = null;
   function elapsed() {
     return base + (startedAt === null ? 0 : Date.now() - startedAt);
   }
+  function tick() {
+    clearInterval(handle);
+    handle = setInterval(draw, limit === null ? 1000 : 250);
+  }
+  function pause() {
+    if (startedAt === null) return;
+    base = elapsed();
+    startedAt = null;
+    clearInterval(handle);
+    draw();
+  }
   function draw() {
-    el.textContent = format(elapsed());
+    if (limit === null) {
+      el.textContent = format(elapsed());
+      el.classList.remove('low');
+      return;
+    }
+    const left = Math.max(0, limit - elapsed());
+    el.textContent = format(left);
+    el.classList.toggle('low', left <= 30000);
+    if (left === 0 && startedAt !== null) {
+      pause();
+      if (onExpire) onExpire();
+    }
   }
   return {
-    start(fromMs = 0) {
+    start(fromMs = 0, { limitMs = null, onExpire: expire = null } = {}) {
       base = fromMs;
+      limit = limitMs;
+      onExpire = expire;
       startedAt = Date.now();
-      clearInterval(handle);
-      handle = setInterval(draw, 1000);
+      tick();
       draw();
     },
     resume() {
       if (startedAt !== null) return;
       startedAt = Date.now();
-      clearInterval(handle);
-      handle = setInterval(draw, 1000);
-    },
-    pause() {
-      if (startedAt === null) return;
-      base = elapsed();
-      startedAt = null;
-      clearInterval(handle);
+      tick();
       draw();
     },
+    pause,
     elapsed,
     show(visible) {
       el.hidden = !visible;

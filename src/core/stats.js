@@ -7,7 +7,7 @@
 // nothing). X marks and hints do not matter.
 
 export const OVERALL = 'overall';
-export const RESERVED = new Set([OVERALL, 'daily']);
+export const RESERVED = new Set([OVERALL, 'daily', 'climb']);
 
 export function comboKey(puzzle) {
   return `${puzzle.n}-${puzzle.difficulty}`;

@@ -2,13 +2,14 @@
 
 const $ = (id) => document.getElementById(id);
 
-export function showEnd({ status, title, message, timeText, artSvg, onNext, onLook }) {
+export function showEnd({ status, title, message, timeText, artSvg, onNext, onLook, nextLabel = 'Next puzzle' }) {
   $('overlay-title').textContent = title;
   $('overlay-message').textContent = message;
   $('overlay-time').textContent = timeText || '';
   $('overlay-art').innerHTML = artSvg;
   $('end-card').dataset.status = status;
   const next = $('btn-next');
+  next.textContent = nextLabel;
   next.onclick = onNext;
   const look = $('btn-look');
   look.onclick = onLook;
