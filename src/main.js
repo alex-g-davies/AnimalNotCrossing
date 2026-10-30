@@ -1,7 +1,7 @@
 // Wiring: owns the current game, settings, the worker and persistence.
 
 import { RANDOM, SIZES, resolveChoice, resolveSpec, specMatches } from './core/spec.js';
-import { comboKeys, recordAbandon, recordResult as recordStats, streaks } from './core/stats.js';
+import { comboKeys, compareTime, feedbackDue, gamesPlayed, recordAbandon, recordResult as recordStats, streaks } from './core/stats.js';
 import { clearStage, newRun, recordRun, stageSpec } from './core/climb.js';
 import { randomSeed } from './core/rng.js';
 import * as game from './core/game.js';
@@ -10,10 +10,11 @@ import { dailySpec, liveStreak, recordDailySolve } from './core/daily.js';
 import { LOSS_MESSAGES, WIN_MESSAGES, fillAnimal, nextMessage } from './messages.js';
 import { KEYS, dumpAll, load, remove, requestPersistence, restoreAll, save } from './store/storage.js';
 import { ANIMALS, DEFAULT_ANIMAL, PAW_SVG } from './ui/animals.js';
+import { ADVANCED_SVG } from './ui/advanced.js';
 import { PIXEL_PAW, PIXEL_SPRITES } from './ui/animals-pixel.js';
 import { DEFAULT_PALETTE, PALETTES, applyPalette } from './ui/palettes.js';
 import { createBoard } from './ui/board.js';
-import { confetti, formatTime, hideEnd, hideHint, showEnd, showHint, showLoading } from './ui/screens.js';
+import { confetti, formatTime, hideEnd, hideHint, showEnd, showFeedback, showHint, showLoading } from './ui/screens.js';
 import {
   bindBar, bindMenu, closeMenu, createTimer, openMenu, renderMistakes, renderStats, setSubtitle, setUndoEnabled, syncMenu,
 } from './ui/controls.js';
@@ -28,6 +29,7 @@ const DEFAULT_SETTINGS = {
   animal: DEFAULT_ANIMAL,
   theme: 'auto',
   palette: DEFAULT_PALETTE,
+  advanced: false,
 };
 
 const settings = { ...DEFAULT_SETTINGS, ...(load(KEYS.settings, {}) || {}) };
@@ -74,7 +76,9 @@ function activePalette() {
 function pixelLook() {
   return activePalette() === 'valley';
 }
+// Advanced mode replaces every animal icon, whatever the theme.
 function animalSvg(id = activeAnimal()) {
+  if (settings.advanced) return ADVANCED_SVG;
   const key = id in ANIMALS ? id : DEFAULT_ANIMAL;
   return pixelLook() ? PIXEL_SPRITES[key] : ANIMALS[key].markup;
 }
@@ -435,7 +439,9 @@ function finish() {
   timer.pause();
   current = game.setElapsed(current, timer.elapsed());
   const won = current.status === 'won';
+  const comparison = compareTime(load(KEYS.stats, {}) || {}, current.puzzle, current.elapsedMs);
   const { streak } = streaks(recordResult(won));
+  const statText = statTextFor(won, comparison, current.puzzle);
   const animal = ANIMALS[activeAnimal()];
   const cycles = load(KEYS.cycles, {}) || {};
   const list = won ? WIN_MESSAGES : LOSS_MESSAGES;
@@ -447,19 +453,51 @@ function finish() {
   render();
   persist();
   const message = fillAnimal(picked.message, animal.name, animal.plural);
-  if (current.puzzle.climb && climb) return finishClimb(won, message);
+  if (current.puzzle.climb && climb) return finishClimb(won, message, statText);
   showEnd({
     status: current.status,
     title: won ? 'Solved!' : 'Out of paws',
     message,
     timeText: won ? `Time: ${formatTime(current.elapsedMs)} · Streak: ${streak}` : 'Here is how it fits together.',
+    statText,
     artSvg: animalSvg(),
-    onNext: startNew,
+    onNext: withFeedback(startNew),
     onLook: () => hideEnd(),
   });
 }
 
-function finishClimb(won, message) {
+// One line under the time: how this game compares with earlier ones at the
+// same size and difficulty.
+function statTextFor(won, c, puzzle) {
+  const combo = `${puzzle.n} × ${puzzle.n} ${capital(puzzle.difficulty)}`;
+  if (!won) return c.solved ? `Won ${c.solved} of ${c.solved + c.lost + 1} at ${combo}.` : '';
+  if (c.count === 0) return `Your first ${combo} win.`;
+  const avg = c.pct > 0 ? `${c.pct}% faster than your average` : c.pct < 0 ? `${-c.pct}% slower than your average` : 'right on your average';
+  return c.newBest ? `New best for ${combo}, ${avg}.` : `${capital(avg)} for ${combo}.`;
+}
+
+// Every tenth finished game, the "next" button first shows the feedback card.
+function withFeedback(then) {
+  return () => {
+    const feedback = load(KEYS.feedback, {}) || {};
+    if (!feedbackDue(load(KEYS.stats, {}) || {}, feedback)) return then();
+    const shown = { ratings: {}, ious: 0, later: 0, ...feedback, asked: gamesPlayed(load(KEYS.stats, {}) || {}) };
+    save(KEYS.feedback, shown);
+    hideEnd();
+    showFeedback({
+      onAnswer: (answers) => {
+        const f = load(KEYS.feedback, shown) || shown;
+        f.ratings = { ...(f.ratings || {}), [answers.rating]: ((f.ratings || {})[answers.rating] || 0) + 1 };
+        if (answers.iou) f.ious = (f.ious || 0) + 1;
+        else f.later = (f.later || 0) + 1;
+        save(KEYS.feedback, f);
+      },
+      onDone: then,
+    });
+  };
+}
+
+function finishClimb(won, message, statText) {
   const stage = current.puzzle.climb;
   if (won) {
     climb = clearStage(climb, current.elapsedMs);
@@ -470,9 +508,10 @@ function finishClimb(won, message) {
       title: `Stage ${stage} cleared!`,
       message,
       timeText: `Time: ${formatTime(current.elapsedMs)} · Next: ${next.n} × ${next.n} ${capital(next.difficulty)} in ${formatTime(next.timeLimitMs)}`,
+      statText,
       artSvg: animalSvg(),
       nextLabel: 'Next stage',
-      onNext: startClimbStage,
+      onNext: withFeedback(startClimbStage),
       onLook: () => hideEnd(),
     });
     return;
@@ -487,7 +526,7 @@ function finishClimb(won, message) {
     timeText: `You reached stage ${reached} · Best: stage ${best}`,
     artSvg: animalSvg(),
     nextLabel: 'Climb again',
-    onNext: startClimb,
+    onNext: withFeedback(startClimb),
     onLook: () => hideEnd(),
   });
 }
@@ -528,7 +567,9 @@ function statsHtml() {
   });
   const c = stats.climb;
   const climbRow = c ? `<div class="stat"><b>Climb: stage ${c.bestStage}</b><span>best run · ${c.runs} run${c.runs === 1 ? '' : 's'} · ${fmt(c.bestStageMs)} to get there</span></div>` : '';
-  return `<div class="stat"><b>Win streak: ${overall.streak}</b><span>Best: ${overall.bestStreak}. A loss, or leaving a puzzle after a move, ends it.</span></div>${climbRow}${rows.join('')}`;
+  const f = load(KEYS.feedback, {}) || {};
+  const iouRow = f.ious || f.later ? `<div class="stat"><b>Owed to the developer: ${f.ious || 0} gawk gawk 9000${f.ious === 1 ? '' : 's'}</b><span>Deferred ${f.later || 0} time${f.later === 1 ? '' : 's'}. Collected in person; the app only keeps count.</span></div>` : '';
+  return `<div class="stat"><b>Win streak: ${overall.streak}</b><span>Best: ${overall.bestStreak}. A loss, or leaving a puzzle after a move, ends it.</span></div>${climbRow}${iouRow}${rows.join('')}`;
 }
 
 function exportData() {
@@ -574,7 +615,7 @@ function onSettingChange(key, value) {
     if (current) current = { ...current, look: pickLook() };
     persist();
   }
-  if (key === 'theme' || key === 'palette' || key === 'animal') applyLook();
+  if (key === 'theme' || key === 'palette' || key === 'animal' || key === 'advanced') applyLook();
   if (key === 'timer') timer.show(value || Boolean(current && current.puzzle.climb));
   if ((key === 'tapMode' || key === 'autoMark' || key === 'relaxed') && current) {
     current = { ...current, settings: { ...current.settings, ...gameSettings() } };

@@ -2,10 +2,11 @@
 
 const $ = (id) => document.getElementById(id);
 
-export function showEnd({ status, title, message, timeText, artSvg, onNext, onLook, nextLabel = 'Next puzzle' }) {
+export function showEnd({ status, title, message, timeText, statText, artSvg, onNext, onLook, nextLabel = 'Next puzzle' }) {
   $('overlay-title').textContent = title;
   $('overlay-message').textContent = message;
   $('overlay-time').textContent = timeText || '';
+  $('overlay-stat').textContent = statText || '';
   $('overlay-art').innerHTML = artSvg;
   $('end-card').dataset.status = status;
   const next = $('btn-next');
@@ -59,4 +60,46 @@ export function confetti(count = 60) {
   }
   document.body.appendChild(layer);
   setTimeout(() => layer.remove(), 3000);
+}
+
+// The "enjoying the app?" card: two questions, then a thank-you. Each step
+// swaps the text and buttons; `onDone` runs when the player leaves the card.
+export function showFeedback({ onAnswer, onDone }) {
+  const card = $('feedback-card');
+  const title = $('feedback-title');
+  const text = $('feedback-text');
+  const yes = $('btn-feedback-yes');
+  const no = $('btn-feedback-no');
+  let answers = {};
+  function step(t, body, yesLabel, noLabel, onYes, onNo) {
+    title.textContent = t;
+    text.textContent = body;
+    yes.textContent = yesLabel;
+    no.textContent = noLabel;
+    no.hidden = !noLabel;
+    yes.onclick = onYes;
+    no.onclick = onNo;
+    yes.focus();
+  }
+  function finish(extra) {
+    answers = { ...answers, ...extra };
+    onAnswer(answers);
+    step('Thank you!', answers.iou ? 'Logged. The developer will collect in person. Your running total is in Stats.' : 'Noted. The developer will ask again in a few games, hopefully with better luck.', 'Back to the puzzles', '', close, null);
+  }
+  function close() {
+    $('feedback').hidden = true;
+    onDone();
+  }
+  function askIou() {
+    step('One more thing', 'Would you like to support the developer with that gawk gawk 9000?', 'Absolutely', 'Maybe later', () => finish({ iou: true }), () => finish({ iou: false }));
+  }
+  step('Enjoying Animal Not Crossing?', 'Quick check-in, no pressure. How is it going?', 'Love it', 'It is fine', () => {
+    answers.rating = 'love';
+    askIou();
+  }, () => {
+    answers.rating = 'fine';
+    askIou();
+  });
+  card.dataset.step = 'ask';
+  $('feedback').hidden = false;
 }

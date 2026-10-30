@@ -33,6 +33,7 @@ Deploy is a push to `main`; GitHub Pages serves the repo root.
 - **Name** is "Animal Not Crossing" (private pun). Rename before any public release.
 - "Cat" in the guide means "animal" in code; the chosen animal name is substituted into copy.
 - **Issue #1 feedback (Oct 30, 2026).** Size, difficulty, animal and colours each accept "random", picked once per puzzle (`src/core/spec.js`). Win streaks overall and per combination (`src/core/stats.js`); a loss or leaving a started puzzle ends one. **Climb mode** (`src/core/climb.js`): ladder 6×6 easy to 12×12 hard, countdown of 5 s per cell shrinking 15% a stage past the ladder, normal mistake limits, relaxed ignored. Icons were replaced by the owner's art (Oct 30, 2026).
+- **Second feedback round (Oct 30, 2026).** About a third of the end messages are cheeky (grouped at the end of each list in `src/messages.js`). The end card compares the time with earlier wins at that size and difficulty (`compareTime` in stats.js). Every tenth finished game, "Next" first shows a feedback card (`feedbackDue`); answers are tallied locally under `KEYS.feedback` and shown in Stats. "Advanced mode" (menu, Look) swaps every animal icon for `src/ui/advanced.js`, an adult joke the owner asked for; keep it behind the toggle, off by default. New animals wait on an art sheet from the owner.
 - Typography is the system rounded stack; the only bundled font is Pixelify Sans (OFL) for Valley.
 - The worker pre-generates the next puzzle while the player solves the current one.
 

@@ -19,11 +19,14 @@ export const WIN_MESSAGES = [
   'Solved with style. You are my favourite puzzle too.',
   'Nice work. Thinking of you, always.',
   'You and logic: a love story. You and me: the sequel.',
-  // The cheeky ones (about a fifth of the pool). Edit to taste.
+  // The cheeky ones (about a third of the pool). Edit to taste.
   'Nice tots, g. Also, nice solve.',
   'Solved. And, for the record, you have an absolute dumptruck.',
   'Big brain, great legs, mine. Every {animal} is home.',
   'Clean solve. Now walk away slowly so I can watch.',
+  'Puzzle: handled. Thighs: unreasonable. Carry on.',
+  'All {animals} home. Now bring that body over here.',
+  'Solved. The {animals} are impressed. I am mostly looking at your cake.',
 ];
 
 export const LOSS_MESSAGES = [
@@ -39,9 +42,12 @@ export const LOSS_MESSAGES = [
   'Even the best {animal} herders have off days. You are still the best.',
   'This one was stubborn. You are more stubborn. Go again.',
   'A miss is just a warm-up. Love you.',
-  // The cheeky ones. Edit to taste.
+  // The cheeky ones (about a third of the pool). Edit to taste.
   'Lost the puzzle. Still got the dumptruck.',
   'The {animals} got distracted. Honestly, same. Look at you.',
+  'The board won. Your legs remain undefeated.',
+  'Lost one. Cheer up: that behind could stop traffic.',
+  'The {animals} ran off. I would too, right behind you, for the view.',
 ];
 
 // Shuffled cycle through a list so no message repeats until all have shown.

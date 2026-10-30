@@ -104,6 +104,7 @@ export function bindMenu({ settings, sizes, animals, palettes, onChange, onClose
     animal: ['set-animal', 'value', String],
     theme: ['set-theme', 'value', String],
     palette: ['set-palette', 'value', String],
+    advanced: ['set-advanced', 'checked', Boolean],
   };
   for (const [key, [id, prop, cast]] of Object.entries(fields)) {
     const input = $(id);

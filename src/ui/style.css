@@ -395,6 +395,8 @@ body {
 .card p { margin: 6px 0; line-height: 1.45; }
 #overlay-message { font-size: 1.15rem; font-weight: 500; padding: 0 6px; }
 #overlay-time { color: var(--muted); font-size: 0.85rem; margin-top: 10px; }
+#overlay-stat { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
+#overlay-stat:empty { display: none; }
 #overlay-art { height: 96px; display: flex; align-items: center; justify-content: center; color: var(--accent); }
 #overlay-art svg, #overlay-art img { width: 84px; height: 84px; animation: bounce 1.2s ease-in-out infinite; }
 #overlay-art img { width: 96px; height: 96px; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2)); }
@@ -582,3 +584,14 @@ html[data-palette="valley"] .confetti i { border-radius: 0; }
   from { transform: translateY(0) rotate(0deg); }
   to { transform: translateY(105vh) rotate(540deg); opacity: 0.4; }
 }
+
+/* Advanced mode: the icon sways from its base. Outer animations (pop, bounce,
+   hop) stay on the svg, so the sway lives on the inner group. */
+.adv .wobble { transform-box: fill-box; transform-origin: 50% 92%; animation: sway 2.4s ease-in-out infinite; }
+@keyframes sway { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(7deg); } }
+html[data-palette="valley"] .cell .icon svg.adv { image-rendering: auto; }
+
+/* Feedback card: shown once every ten finished games. */
+#feedback-card p { color: var(--fg); }
+#feedback-card .stars { font-size: 1.6rem; letter-spacing: 0.08em; color: var(--hint); margin: 2px 0 6px; }
+#feedback-card button.link { display: block; width: 100%; }

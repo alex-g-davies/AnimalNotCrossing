@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { OVERALL, comboKeys, recordAbandon, recordResult, streaks } from '../src/core/stats.js';
+import { OVERALL, comboKeys, compareTime, feedbackDue, gamesPlayed, recordAbandon, recordResult, streaks } from '../src/core/stats.js';
 
 const p8 = { n: 8, difficulty: 'medium' };
 const p6 = { n: 6, difficulty: 'easy' };
@@ -50,4 +50,36 @@ test('inputs are never mutated', () => {
   recordResult(before, p8, true, 7);
   recordAbandon(before, p8);
   assert.deepEqual(before, copy);
+});
+
+test('compareTime measures against earlier wins at the same combination', () => {
+  assert.deepEqual(compareTime({}, p8, 40000), { count: 0, avg: null, pct: null, newBest: true, solved: 0, lost: 0 });
+  let s = recordResult({}, p8, true, 60000);
+  s = recordResult(s, p8, true, 40000);
+  s = recordResult(s, p8, false, 90000);
+  const c = compareTime(s, p8, 40000);
+  assert.equal(c.count, 2);
+  assert.equal(c.avg, 50000);
+  assert.equal(c.pct, 20, '40 s is 20% faster than a 50 s average');
+  assert.equal(c.newBest, false, 'equal to the best is not a new best');
+  assert.equal(c.solved, 2);
+  assert.equal(c.lost, 1);
+  assert.equal(compareTime(s, p8, 55000).pct, -10);
+  assert.equal(compareTime(s, p8, 39000).newBest, true);
+  assert.equal(compareTime(s, p6, 1).count, 0, 'other combinations do not mix in');
+});
+
+test('feedback is due every tenth finished game, once', () => {
+  let s = {};
+  assert.equal(feedbackDue(s, null), false);
+  for (let i = 0; i < 9; i++) s = recordResult(s, i % 2 ? p8 : p6, i % 3 !== 0, 1000);
+  assert.equal(gamesPlayed(s), 9);
+  assert.equal(feedbackDue(s, null), false);
+  s = recordResult(s, p8, false, 1000);
+  assert.equal(gamesPlayed(s), 10);
+  assert.equal(feedbackDue(s, null), true);
+  assert.equal(feedbackDue(s, { asked: 10 }), false, 'already shown at this count');
+  assert.equal(feedbackDue({ ...s, climb: { runs: 1 }, daily: { current: 1 } }, null), true, 'reserved keys are ignored');
+  for (let i = 0; i < 10; i++) s = recordResult(s, p8, true, 1000);
+  assert.equal(feedbackDue(s, { asked: 10 }), true);
 });
