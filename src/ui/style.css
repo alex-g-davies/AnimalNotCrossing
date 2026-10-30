@@ -467,10 +467,10 @@ button.link {
 }
 .row.gap button:active { transform: scale(0.98); }
 .note { color: var(--muted); font-size: 0.85rem; margin: 6px 0 0; }
-#stats { font-size: 0.9rem; color: var(--muted); line-height: 1.5; }
-#stats table { width: 100%; border-collapse: collapse; }
-#stats td, #stats th { text-align: left; padding: 3px 0; font-weight: 500; }
-#stats th { color: var(--fg); }
+#stats { font-size: 0.9rem; color: var(--muted); line-height: 1.45; }
+#stats .stat { display: flex; flex-direction: column; padding: 4px 0; }
+#stats .stat + .stat { border-top: 1px solid var(--line); }
+#stats .stat b { color: var(--fg); font-weight: 600; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

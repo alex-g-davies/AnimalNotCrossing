@@ -69,12 +69,12 @@ export function createTimer(el, format) {
 
 // Fills the selects, mirrors `settings` into the form, and reports changes.
 export function bindMenu({ settings, sizes, animals, palettes, onChange, onClose, onExport, onImport }) {
-  fill($('set-size'), sizes.map((n) => [String(n), n >= 12 ? `${n} × ${n} (large)` : `${n} × ${n}`]));
-  fill($('set-animal'), animals.map(([id, a]) => [id, capital(a.name)]));
-  fill($('set-palette'), palettes.map(([id, p]) => [id, p.name]));
+  fill($('set-size'), [...sizes.map((n) => [String(n), n >= 12 ? `${n} × ${n} (large)` : `${n} × ${n}`]), ['random', 'Random']]);
+  fill($('set-animal'), [...animals.map(([id, a]) => [id, capital(a.name)]), ['random', 'Random each puzzle']]);
+  fill($('set-palette'), [...palettes.map(([id, p]) => [id, p.name]), ['random', 'Random each puzzle']]);
 
   const fields = {
-    n: ['set-size', 'value', Number],
+    n: ['set-size', 'value', (v) => (v === 'random' ? v : Number(v))],
     difficulty: ['set-difficulty', 'value', String],
     tapMode: ['set-tap', 'value', String],
     autoMark: ['set-auto-mark', 'checked', Boolean],

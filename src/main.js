@@ -1,6 +1,7 @@
 // Wiring: owns the current game, settings, the worker and persistence.
 
-import { MAX_SIZE, MIN_SIZE } from './core/generator.js';
+import { RANDOM, SIZES, resolveChoice, resolveSpec, specMatches } from './core/spec.js';
+import { comboKeys, recordAbandon, recordResult as recordStats, streaks } from './core/stats.js';
 import { randomSeed } from './core/rng.js';
 import * as game from './core/game.js';
 import { hintFor } from './core/hints.js';
@@ -37,8 +38,8 @@ const params = new URLSearchParams(location.search);
 for (const key of ['palette', 'animal', 'theme']) if (params.has(key)) settings[key] = params.get(key);
 let current = null; // game state
 let hint = null; // { tier, data }
-let nextPuzzle = null; // pre-generated { key, puzzle }
-let pendingKey = null;
+let nextPuzzle = null; // a pre-generated puzzle waiting for "New"
+let pending = null; // { n, difficulty, promise } while one is being generated
 
 const board = createBoard(document.getElementById('board'));
 const timer = createTimer(document.getElementById('timer'), formatTime);
@@ -49,11 +50,27 @@ const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
 function isDark() {
   return settings.theme === 'dark' || (settings.theme === 'auto' && darkQuery.matches);
 }
+// Animal and palette may be set to 'random': the concrete pick is made when a
+// game starts and stored on it as `look`, so it stays put for that puzzle.
+function pickLook() {
+  return {
+    animal: resolveChoice(settings.animal, Object.keys(ANIMALS)),
+    palette: resolveChoice(settings.palette, Object.keys(PALETTES)),
+  };
+}
+function activeAnimal() {
+  const id = settings.animal === RANDOM ? current && current.look && current.look.animal : settings.animal;
+  return id in ANIMALS ? id : DEFAULT_ANIMAL;
+}
+function activePalette() {
+  const id = settings.palette === RANDOM ? current && current.look && current.look.palette : settings.palette;
+  return id in PALETTES ? id : DEFAULT_PALETTE;
+}
 // The icon style follows the theme: Valley uses the pixel sprites.
 function pixelLook() {
-  return settings.palette === 'valley';
+  return activePalette() === 'valley';
 }
-function animalSvg(id) {
+function animalSvg(id = activeAnimal()) {
   const key = id in ANIMALS ? id : DEFAULT_ANIMAL;
   return pixelLook() ? PIXEL_SPRITES[key] : ANIMALS[key].svg;
 }
@@ -61,10 +78,11 @@ function pawSvg() {
   return pixelLook() ? PIXEL_PAW : PAW_SVG;
 }
 function applyLook() {
+  const palette = activePalette();
   document.documentElement.dataset.theme = settings.theme;
-  document.documentElement.dataset.palette = settings.palette;
-  applyPalette(settings.palette, isDark());
-  board.setAnimal(animalSvg(settings.animal));
+  document.documentElement.dataset.palette = palette;
+  applyPalette(palette, isDark());
+  board.setAnimal(animalSvg());
   if (current) renderMistakes(game.mistakesLeft(current), current.mistakeLimit, pawSvg());
 }
 darkQuery.addEventListener('change', applyLook);
@@ -98,36 +116,41 @@ function generate(n, difficulty, seed = freshSeed()) {
   });
 }
 
-function keyFor(n, difficulty) {
-  return `${n}:${difficulty}`;
-}
-
-// Keeps one puzzle ready for the current size and difficulty.
+// Keeps one puzzle ready that satisfies the current size and difficulty
+// settings. With a setting on "random" the pick is made here, once per puzzle.
 async function prepareNext() {
-  const key = keyFor(settings.n, settings.difficulty);
-  if ((nextPuzzle && nextPuzzle.key === key) || pendingKey === key) return;
-  pendingKey = key;
+  if (nextPuzzle && specMatches(settings, nextPuzzle)) return;
+  if (pending && specMatches(settings, pending)) return;
+  const spec = resolveSpec(settings);
+  const promise = generate(spec.n, spec.difficulty);
+  pending = { ...spec, promise };
   try {
-    const puzzle = await generate(settings.n, settings.difficulty);
-    if (pendingKey === key) nextPuzzle = { key, puzzle };
+    const puzzle = await promise;
+    if (pending && pending.promise === promise) nextPuzzle = puzzle;
   } catch (error) {
     console.error('generation failed', error);
   } finally {
-    if (pendingKey === key) pendingKey = null;
+    if (pending && pending.promise === promise) pending = null;
   }
 }
 
 async function takePuzzle() {
-  const key = keyFor(settings.n, settings.difficulty);
-  if (nextPuzzle && nextPuzzle.key === key) {
-    const { puzzle } = nextPuzzle;
+  if (nextPuzzle && specMatches(settings, nextPuzzle)) {
+    const puzzle = nextPuzzle;
     nextPuzzle = null;
     return puzzle;
   }
   nextPuzzle = null;
   showLoading(true);
   try {
-    return await generate(settings.n, settings.difficulty);
+    let puzzle;
+    if (pending && specMatches(settings, pending)) puzzle = await pending.promise;
+    else {
+      const spec = resolveSpec(settings);
+      puzzle = await generate(spec.n, spec.difficulty);
+    }
+    if (nextPuzzle === puzzle) nextPuzzle = null;
+    return puzzle;
   } finally {
     showLoading(false);
   }
@@ -140,13 +163,13 @@ function gameSettings() {
 }
 
 function startGame(puzzle, saved = null) {
-  current = saved || game.newGame(puzzle, gameSettings());
+  current = saved || { ...game.newGame(puzzle, gameSettings()), look: pickLook() };
   hint = null;
   hideHint();
   hideEnd();
   board.setPuzzle(puzzle, { onTap, onHold, onDragStart, onDragEnter, onDragEnd });
   showTip();
-  board.setAnimal(animalSvg(settings.animal));
+  applyLook();
   setSubtitle(puzzle.daily ? `Daily · ${puzzle.daily}` : `${puzzle.n} × ${puzzle.n} · ${capital(puzzle.difficulty)}`);
   timer.show(settings.timer);
   timer.start(current.elapsedMs);
@@ -156,8 +179,15 @@ function startGame(puzzle, saved = null) {
   prepareNext();
 }
 
+// Walking away from a puzzle after making a move ends the win streak.
+function leaveCurrent() {
+  if (!current || current.status !== 'playing' || current.history.length === 0) return;
+  save(KEYS.stats, recordAbandon(load(KEYS.stats, {}) || {}, current.puzzle));
+}
+
 async function startNew() {
   timer.pause();
+  leaveCurrent();
   const puzzle = await takePuzzle();
   startGame(puzzle);
 }
@@ -168,6 +198,7 @@ async function startDaily() {
   closeMenu();
   if (current && current.puzzle.daily === spec.key) return;
   timer.pause();
+  leaveCurrent();
   showLoading(true);
   try {
     const puzzle = await generate(spec.n, spec.difficulty, spec.seed);
@@ -269,7 +300,7 @@ function onUndo() {
 // Shown on the first few puzzles until the player has placed an animal by holding.
 function showTip() {
   if (settings.tapMode !== 'hold' || (load(KEYS.settings, {}) || {}).tipDone) return;
-  const animal = ANIMALS[settings.animal] || ANIMALS[DEFAULT_ANIMAL];
+  const animal = ANIMALS[activeAnimal()];
   const tip = document.getElementById('tip');
   tip.textContent = `Tap for an X, drag to X a whole run. Press and hold to place a ${animal.name}.`;
   tip.hidden = false;
@@ -293,7 +324,7 @@ function clearHint() {
 
 function onHint() {
   if (!current || current.status !== 'playing') return;
-  const animal = ANIMALS[settings.animal] || ANIMALS[DEFAULT_ANIMAL];
+  const animal = ANIMALS[activeAnimal()];
   if (!hint) {
     const data = hintFor(current.puzzle, current.board, { animal: animal.name });
     hint = { tier: 1, data };
@@ -313,8 +344,8 @@ function finish() {
   timer.pause();
   current = game.setElapsed(current, timer.elapsed());
   const won = current.status === 'won';
-  recordResult(won);
-  const animal = ANIMALS[settings.animal] || ANIMALS[DEFAULT_ANIMAL];
+  const { streak } = streaks(recordResult(won));
+  const animal = ANIMALS[activeAnimal()];
   const cycles = load(KEYS.cycles, {}) || {};
   const list = won ? WIN_MESSAGES : LOSS_MESSAGES;
   const picked = nextMessage(list, cycles[won ? 'win' : 'loss'], Math.random);
@@ -328,8 +359,8 @@ function finish() {
     status: current.status,
     title: won ? 'Solved!' : 'Out of paws',
     message: fillAnimal(picked.message, animal.name, animal.plural),
-    timeText: won ? `Time: ${formatTime(current.elapsedMs)}` : 'Here is how it fits together.',
-    artSvg: animalSvg(settings.animal),
+    timeText: won ? `Time: ${formatTime(current.elapsedMs)} · Streak: ${streak}` : 'Here is how it fits together.',
+    artSvg: animalSvg(),
     onNext: startNew,
     onLook: () => hideEnd(),
   });
@@ -350,33 +381,26 @@ function rememberSeed(seed) {
 }
 
 function recordResult(won) {
-  const stats = load(KEYS.stats, {}) || {};
-  const key = `${current.puzzle.n}-${current.puzzle.difficulty}`;
-  const entry = stats[key] || { solved: 0, lost: 0, times: [], best: null };
-  if (won) {
-    entry.solved++;
-    entry.times = [...entry.times, current.elapsedMs].slice(-100);
-    entry.best = entry.best === null ? current.elapsedMs : Math.min(entry.best, current.elapsedMs);
-  } else {
-    entry.lost++;
-  }
-  stats[key] = entry;
-  if (won && current.puzzle.daily) stats.daily = recordDailySolve(stats.daily, current.puzzle.daily);
+  let stats = recordStats(load(KEYS.stats, {}) || {}, current.puzzle, won, current.elapsedMs);
+  if (won && current.puzzle.daily) stats = { ...stats, daily: recordDailySolve(stats.daily, current.puzzle.daily) };
   save(KEYS.stats, stats);
+  return stats;
 }
 
 function statsHtml() {
   const stats = load(KEYS.stats, {}) || {};
-  const keys = Object.keys(stats).filter((k) => k !== 'daily').sort();
+  const keys = comboKeys(stats);
   if (!keys.length) return 'No puzzles finished yet.';
+  const overall = streaks(stats);
+  const fmt = (v) => (v === null || v === undefined ? '–' : formatTime(v));
   const rows = keys.map((key) => {
     const s = stats[key];
-    const sorted = s.times.slice().sort((a, b) => a - b);
+    const sorted = (s.times || []).slice().sort((a, b) => a - b);
     const median = sorted.length ? sorted[Math.floor(sorted.length / 2)] : null;
-    const fmt = (v) => (v === null ? '–' : formatTime(v));
-    return `<tr><th>${key.replace('-', ' · ')}</th><td>${s.solved} solved</td><td>${s.lost} lost</td><td>best ${fmt(s.best)}</td><td>median ${fmt(median)}</td></tr>`;
+    const [n, difficulty] = key.split('-');
+    return `<div class="stat"><b>${n} × ${n} · ${capital(difficulty)}</b><span>${s.solved} solved · ${s.lost} lost · best ${fmt(s.best)} · median ${fmt(median)} · streak ${s.streak || 0}, best ${s.bestStreak || 0}</span></div>`;
   });
-  return `<table>${rows.join('')}</table>`;
+  return `<div class="stat"><b>Win streak: ${overall.streak}</b><span>Best: ${overall.bestStreak}. A loss, or leaving a puzzle after a move, ends it.</span></div>${rows.join('')}`;
 }
 
 function exportData() {
@@ -418,6 +442,10 @@ async function importData(file) {
 function onSettingChange(key, value) {
   settings[key] = value;
   save(KEYS.settings, settings);
+  if (key === 'palette' || key === 'animal') {
+    if (current) current = { ...current, look: pickLook() };
+    persist();
+  }
   if (key === 'theme' || key === 'palette' || key === 'animal') applyLook();
   if (key === 'timer') timer.show(value);
   if ((key === 'tapMode' || key === 'autoMark' || key === 'relaxed') && current) {
@@ -432,7 +460,7 @@ function onSettingChange(key, value) {
     if (current.status !== 'playing') finish();
   }
   if (key === 'n' || key === 'difficulty') {
-    nextPuzzle = null;
+    if (nextPuzzle && !specMatches(settings, nextPuzzle)) nextPuzzle = null;
     prepareNext();
   }
 }
@@ -457,7 +485,7 @@ bindBar({
 
 bindMenu({
   settings,
-  sizes: Array.from({ length: MAX_SIZE - MIN_SIZE + 1 }, (_, i) => MIN_SIZE + i),
+  sizes: SIZES,
   animals: Object.entries(ANIMALS),
   palettes: Object.entries(PALETTES),
   onChange: onSettingChange,

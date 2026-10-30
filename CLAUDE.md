@@ -47,7 +47,7 @@ Deploy is a push to `main`; GitHub Pages serves the repo root.
 ```
 index.html  manifest.webmanifest  sw.js  icons/
 src/main.js            wiring, screens, owns game state
-src/core/              rng, rules, solver, generator, techniques, difficulty, hints, game, daily
+src/core/              rng, rules, solver, generator, techniques, difficulty, hints, game, daily, spec, stats
 src/ui/                board, controls, screens, animals, themes, palettes, style.css
 src/store/storage.js   localStorage wrapper, every access in try/catch
 src/worker/            generate.worker.js
