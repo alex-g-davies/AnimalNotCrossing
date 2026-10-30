@@ -33,6 +33,12 @@ The look can be previewed from the URL without saving it: `?palette=valley&anima
 - `src/core/game.js` holds the game state as pure functions: taps, undo, mistakes, win and loss.
 - `src/core/climb.js` is climb mode: a ladder from 6×6 easy to 12×12 hard, each stage against a countdown, until a loss or the clock ends the run. `src/core/stats.js` keeps win streaks; `src/core/spec.js` resolves the "random" size, difficulty, animal and colour settings once per puzzle.
 - `src/messages.js` holds the messages shown after every game. Edit them freely.
+- The animal portraits come from one sheet, `art/Kawaii Animal Icon Grid.png`. To re-cut them after editing the sheet (4 columns, 3 rows, in menu order):
+
+  ```
+  node tools/cut-sheet.js "art/Kawaii Animal Icon Grid.png" 4 3 256 img/animals cat,dog,bunny,fox,frog,duck,penguin,hedgehog,chicken,cow,pig,sheep
+  node tools/make-icons.js
+  ```
 - Generation runs in a Web Worker and the next puzzle is prepared while the current one is being solved.
 
 Measured generator numbers live in `PERF.md`.

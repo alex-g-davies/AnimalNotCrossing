@@ -29,17 +29,18 @@ Deploy is a push to `main`; GitHub Pages serves the repo root.
 - **Loss state exists.** Placing an animal on a cell not in the stored solution is a mistake. Limits per difficulty: easy 5, medium 4, hard 3 (constants in `src/core/game.js`). X marks never count. Undo does not refund a mistake. A "relaxed" setting disables the limit.
 - **Every game ends with a loving message**, win or loss, from `src/messages.js`. Shuffled cycle, no immediate repeats. The owner personalises the list.
 - **Sizes 6 to 12.** 12×12 is labelled "large"; its cells are allowed below the 40 px minimum (about 29 px on an iPhone SE).
-- **Themes and animals.** Multiple animal icon sets, several region palettes, light and dark. One theme, "Valley", is a Stardew Valley homage in style only: pixel art, farm palette, farm animals. Never include Stardew's name, sprites, characters or sounds.
+- **Themes and animals.** The animal icons are the owner's kawaii portraits: source sheet `art/Kawaii Animal Icon Grid.png`, cut into transparent 256 px PNGs in `img/animals/` by `node tools/cut-sheet.js` (see the command in README). Several region palettes, light and dark. One theme, "Valley", is a Stardew Valley homage in style only: pixel art, farm palette, and its own pixel sprites for the same twelve animals. Never include Stardew's name, sprites, characters or sounds.
 - **Name** is "Animal Not Crossing" (private pun). Rename before any public release.
 - "Cat" in the guide means "animal" in code; the chosen animal name is substituted into copy.
-- **Issue #1 feedback (Oct 30, 2026).** Size, difficulty, animal and colours each accept "random", picked once per puzzle (`src/core/spec.js`). Win streaks overall and per combination (`src/core/stats.js`); a loss or leaving a started puzzle ends one. **Climb mode** (`src/core/climb.js`): ladder 6×6 easy to 12×12 hard, countdown of 5 s per cell shrinking 15% a stage past the ladder, normal mistake limits, relaxed ignored. Cuter icon sets are the remaining item.
-- Typography is the system rounded stack. No bundled fonts.
+- **Issue #1 feedback (Oct 30, 2026).** Size, difficulty, animal and colours each accept "random", picked once per puzzle (`src/core/spec.js`). Win streaks overall and per combination (`src/core/stats.js`); a loss or leaving a started puzzle ends one. **Climb mode** (`src/core/climb.js`): ladder 6×6 easy to 12×12 hard, countdown of 5 s per cell shrinking 15% a stage past the ladder, normal mistake limits, relaxed ignored. Icons were replaced by the owner's art (Oct 30, 2026).
+- Typography is the system rounded stack; the only bundled font is Pixelify Sans (OFL) for Valley.
 - The worker pre-generates the next puzzle while the player solves the current one.
 
 ## Tools and quirks
 
 - `node tools/screenshot.js out.png "query" [w] [h] [actions-js]`: phone-size screenshots via headless Chrome and the DevTools protocol (no dependency). Look settings can be forced through URL params (`?palette=valley&animal=cow&theme=dark`).
-- `node tools/make-icons.js` regenerates the PNG icons.
+- `node tools/make-icons.js` regenerates the app icons from `img/animals/cat.png` (headless Chrome canvas).
+- `node tools/cut-sheet.js art/sheet.png 4 3 256 img/animals cat,dog,...` re-cuts the animal portraits from the sheet; set `CUT_DEBUG=dir` to also write keying masks.
 - The service worker is cache-first: while developing, unregister it or bump `CACHE_VERSION`, or changes will not show.
 - Measured: random region layouts are almost never unique (0% at 10x10+), so the generator repairs layouts with the deduction engine as the objective. Difficulty: easy = levels 1-2, medium = level 3 with few level-3 steps, hard = many. See PERF.md.
 

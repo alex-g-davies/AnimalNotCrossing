@@ -76,7 +76,7 @@ function pixelLook() {
 }
 function animalSvg(id = activeAnimal()) {
   const key = id in ANIMALS ? id : DEFAULT_ANIMAL;
-  return pixelLook() ? PIXEL_SPRITES[key] : ANIMALS[key].svg;
+  return pixelLook() ? PIXEL_SPRITES[key] : ANIMALS[key].markup;
 }
 function pawSvg() {
   return pixelLook() ? PIXEL_PAW : PAW_SVG;
