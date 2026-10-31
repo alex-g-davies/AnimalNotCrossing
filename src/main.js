@@ -19,6 +19,8 @@ import {
   bindBar, bindMenu, closeMenu, createTimer, openMenu, renderMistakes, renderStats, setSubtitle, setUndoEnabled, syncMenu,
 } from './ui/controls.js';
 
+const LINE_WEIGHTS = ['fine', 'normal', 'bold', 'heavy'];
+
 const DEFAULT_SETTINGS = {
   n: 8,
   difficulty: 'medium',
@@ -29,6 +31,7 @@ const DEFAULT_SETTINGS = {
   animal: DEFAULT_ANIMAL,
   theme: 'auto',
   palette: DEFAULT_PALETTE,
+  lines: 'normal',
   advanced: false,
 };
 
@@ -38,7 +41,7 @@ if (settings.tapMode === 'mark-first' || settings.tapMode === 'animal-first') se
 // Look settings can be previewed from the URL (?palette=valley&animal=cow&theme=dark)
 // without being saved; handy for sharing a look and for screenshots.
 const params = new URLSearchParams(location.search);
-for (const key of ['palette', 'animal', 'theme']) if (params.has(key)) settings[key] = params.get(key);
+for (const key of ['palette', 'animal', 'theme', 'lines']) if (params.has(key)) settings[key] = params.get(key);
 let current = null; // game state
 let hint = null; // { tier, data }
 let nextPuzzle = null; // a pre-generated puzzle waiting for "New"
@@ -89,6 +92,7 @@ function applyLook() {
   const palette = activePalette();
   document.documentElement.dataset.theme = settings.theme;
   document.documentElement.dataset.palette = palette;
+  document.documentElement.dataset.lines = LINE_WEIGHTS.includes(settings.lines) ? settings.lines : 'normal';
   applyPalette(palette, isDark());
   board.setAnimal(animalSvg());
   if (current) renderMistakes(game.mistakesLeft(current), current.mistakeLimit, pawSvg());
@@ -615,7 +619,7 @@ function onSettingChange(key, value) {
     if (current) current = { ...current, look: pickLook() };
     persist();
   }
-  if (key === 'theme' || key === 'palette' || key === 'animal' || key === 'advanced') applyLook();
+  if (key === 'theme' || key === 'palette' || key === 'animal' || key === 'advanced' || key === 'lines') applyLook();
   if (key === 'timer') timer.show(value || Boolean(current && current.puzzle.climb));
   if ((key === 'tapMode' || key === 'autoMark' || key === 'relaxed') && current) {
     current = { ...current, settings: { ...current.settings, ...gameSettings() } };

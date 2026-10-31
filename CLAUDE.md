@@ -34,12 +34,13 @@ Deploy is a push to `main`; GitHub Pages serves the repo root.
 - "Cat" in the guide means "animal" in code; the chosen animal name is substituted into copy.
 - **Issue #1 feedback (Oct 30, 2026).** Size, difficulty, animal and colours each accept "random", picked once per puzzle (`src/core/spec.js`). Win streaks overall and per combination (`src/core/stats.js`); a loss or leaving a started puzzle ends one. **Climb mode** (`src/core/climb.js`): ladder 6×6 easy to 12×12 hard, countdown of 5 s per cell shrinking 15% a stage past the ladder, normal mistake limits, relaxed ignored. Icons were replaced by the owner's art (Oct 30, 2026).
 - **Second feedback round (Oct 30, 2026).** About a third of the end messages are cheeky (grouped at the end of each list in `src/messages.js`). The end card compares the time with earlier wins at that size and difficulty (`compareTime` in stats.js). Every tenth finished game, "Next" first shows a feedback card (`feedbackDue`); answers are tallied locally under `KEYS.feedback` and shown in Stats. "Advanced mode" (menu, Look) swaps every animal icon for `src/ui/advanced.js`, an adult joke the owner asked for; keep it behind the toggle, off by default. New animals wait on an art sheet from the owner.
+- **Issue #2 (Oct 31, 2026).** A "Lines" setting (Look section) scales the internal board lines: fine 0.6×, normal 1×, bold 1.5×, heavy 2.1× of the thin 1 px cell lines and thick 3 px region borders (`--line-scale` in style.css). The outer frame does not change.
 - Typography is the system rounded stack; the only bundled font is Pixelify Sans (OFL) for Valley.
 - The worker pre-generates the next puzzle while the player solves the current one.
 
 ## Tools and quirks
 
-- `node tools/screenshot.js out.png "query" [w] [h] [actions-js]`: phone-size screenshots via headless Chrome and the DevTools protocol (no dependency). Look settings can be forced through URL params (`?palette=valley&animal=cow&theme=dark`).
+- `node tools/screenshot.js out.png "query" [w] [h] [actions-js]`: phone-size screenshots via headless Chrome and the DevTools protocol (no dependency). Look settings can be forced through URL params (`?palette=valley&animal=cow&theme=dark&lines=heavy`).
 - `node tools/make-icons.js` regenerates the app icons from `img/animals/cat.png` (headless Chrome canvas).
 - `node tools/cut-sheet.js art/sheet.png 4 3 256 img/animals cat,dog,...` re-cuts the animal portraits from the sheet; set `CUT_DEBUG=dir` to also write keying masks.
 - The service worker is cache-first: while developing, unregister it or bump `CACHE_VERSION`, or changes will not show.
