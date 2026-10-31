@@ -10,7 +10,6 @@ export const KEYS = {
   seeds: 'seeds',
   cycles: 'cycles',
   climb: 'climb',
-  feedback: 'feedback',
   next: 'next',
 };
 

@@ -2,7 +2,7 @@
 // works with no signal. Change CACHE_VERSION on every deploy (see CLAUDE.md)
 // or players keep the old files.
 
-const CACHE_VERSION = 'anc-v12';
+const CACHE_VERSION = 'anc-v13';
 
 const FILES = [
   './',
@@ -29,6 +29,7 @@ const FILES = [
   './src/ui/animals.js',
   './src/ui/animals-pixel.js',
   './src/ui/advanced.js',
+  './src/ui/backdrop.js',
   './src/ui/palettes.js',
   './src/store/storage.js',
   './src/worker/generate.worker.js',
@@ -57,6 +58,32 @@ const FILES = [
   './img/animals/elephant.png',
   './img/animals/owl.png',
   './img/animals/seal.png',
+  './img/valley/cat.png',
+  './img/valley/dog.png',
+  './img/valley/bunny.png',
+  './img/valley/fox.png',
+  './img/valley/frog.png',
+  './img/valley/duck.png',
+  './img/valley/penguin.png',
+  './img/valley/hedgehog.png',
+  './img/valley/chicken.png',
+  './img/valley/cow.png',
+  './img/valley/pig.png',
+  './img/valley/sheep.png',
+  './img/valley/bear.png',
+  './img/valley/panda.png',
+  './img/valley/mouse.png',
+  './img/valley/raccoon.png',
+  './img/valley/lion.png',
+  './img/valley/tiger.png',
+  './img/valley/monkey.png',
+  './img/valley/koala.png',
+  './img/valley/deer.png',
+  './img/valley/elephant.png',
+  './img/valley/owl.png',
+  './img/valley/seal.png',
+  './img/valley/farm.png',
+  './img/valley/sprig.png',
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',

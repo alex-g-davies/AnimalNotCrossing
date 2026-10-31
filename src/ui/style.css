@@ -107,7 +107,23 @@ body {
   flex-direction: column;
 }
 
+/* Decoration behind the app: one scene per palette (src/ui/backdrop.js). */
+#backdrop { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+#backdrop .deco-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+html[data-theme="dark"] #backdrop { opacity: 0.6; }
+@media (prefers-color-scheme: dark) { html[data-theme="auto"] #backdrop { opacity: 0.6; } }
+/* Valley pieces from the owner's sheet: the farm along the bottom, sprigs in the top corners. */
+#backdrop .farm { position: absolute; left: 50%; bottom: calc(var(--safe-bottom) + 64px); transform: translateX(-50%); width: max(100vw, 720px); max-width: 1200px; }
+#backdrop .ground { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--safe-bottom) + 66px); background: #b7a940; }
+#backdrop .sprig { position: absolute; top: calc(var(--safe-top) + 44px); left: 2px; width: 54px; }
+#backdrop .sprig.tr { left: auto; right: 2px; transform: scaleX(-1); }
+html[data-palette="valley"] #backdrop { opacity: 1; }
+html[data-palette="valley"][data-theme="dark"] #backdrop .deco { filter: brightness(0.55) saturate(0.7); }
+@media (prefers-color-scheme: dark) { html[data-palette="valley"][data-theme="auto"] #backdrop .deco { filter: brightness(0.55) saturate(0.7); } }
+
 #app {
+  position: relative;
+  z-index: 1;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -479,6 +495,8 @@ button.link {
 }
 .row.gap button:active { transform: scale(0.98); }
 .note { color: var(--muted); font-size: 0.85rem; margin: 6px 0 0; }
+.sheet section > .checks { background: var(--bg); padding: 2px 12px 4px 24px; border-bottom: 1px solid var(--line); }
+.checks label.row { min-height: 36px; font-size: 0.9rem; }
 #stats { font-size: 0.9rem; color: var(--muted); line-height: 1.45; }
 #stats .stat { display: flex; flex-direction: column; padding: 4px 0; }
 #stats .stat + .stat { border-top: 1px solid var(--line); }
@@ -513,8 +531,8 @@ html[data-palette="valley"] body {
   background-size: 8px 8px;
 }
 html[data-palette="valley"]:is([data-theme="light"], [data-theme="auto"]) body {
-  --bg: #efe2c0;
-  --card: #f8efd8;
+  --bg: #f4e4bd;
+  --card: #fbf1d9;
   --board-thick: #5a3a1e;
   --board-line: rgba(90, 58, 30, 0.28);
   --accent: #b8502e;
@@ -564,7 +582,7 @@ html[data-palette="valley"] #bar, html[data-palette="valley"] .card, html[data-p
 html[data-palette="valley"] .bar-btn { border-radius: 2px; }
 html[data-palette="valley"] .sheet section > label, html[data-palette="valley"] .sheet section > .row.gap, html[data-palette="valley"] .sheet section > #stats, html[data-palette="valley"] .sheet section > .note { border-radius: 0 !important; }
 html[data-palette="valley"] button.primary { border-radius: 4px; box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.25); }
-html[data-palette="valley"] #overlay-art svg { animation: hop 0.9s steps(2, end) infinite; }
+html[data-palette="valley"] #overlay-art svg, html[data-palette="valley"] #overlay-art img { animation: hop 0.9s steps(2, end) infinite; }
 @keyframes hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
 /* Win confetti: a few falling pieces, cheap and brief. */
@@ -595,8 +613,3 @@ html[data-palette="valley"] .confetti i { border-radius: 0; }
 .adv .wobble { transform-box: fill-box; transform-origin: 50% 92%; animation: sway 2.4s ease-in-out infinite; }
 @keyframes sway { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(7deg); } }
 html[data-palette="valley"] .cell .icon svg.adv { image-rendering: auto; }
-
-/* Feedback card: shown once every ten finished games. */
-#feedback-card p { color: var(--fg); }
-#feedback-card .stars { font-size: 1.6rem; letter-spacing: 0.08em; color: var(--hint); margin: 2px 0 6px; }
-#feedback-card button.link { display: block; width: 100%; }

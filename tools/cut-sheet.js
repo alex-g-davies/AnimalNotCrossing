@@ -62,8 +62,9 @@ await send('Page.navigate', { url: 'about:blank' });
 await new Promise((r) => setTimeout(r, 300));
 const expression = `${pageScript}; cut(${JSON.stringify(b64)}, ${Number(cols)}, ${Number(rows)}, ${Number(size)}, ${JSON.stringify(names)})`;
 const res = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
-if (!res.result || !res.result.result || res.result.result.value === undefined) {
-  console.error('page script failed', JSON.stringify(res).slice(0, 800));
+if (!res.result || !res.result.result || !Array.isArray(res.result.result.value)) {
+  const ex = res.result && res.result.exceptionDetails;
+  console.error('page script failed:', ex ? (ex.exception && ex.exception.description) || ex.text : JSON.stringify(res).slice(0, 800));
   process.exit(1);
 }
 mkdirSync(outdir, { recursive: true });
@@ -71,7 +72,7 @@ for (const tile of res.result.result.value) {
   const file = join(outdir, `${tile.name}.png`);
   writeFileSync(file, Buffer.from(tile.dataUrl.split(',')[1], 'base64'));
   if (process.env.CUT_DEBUG) writeFileSync(join(process.env.CUT_DEBUG, `${tile.name}-mask.png`), Buffer.from(tile.debugUrl.split(',')[1], 'base64'));
-  console.log(`${tile.name.padEnd(9)} bg rgb(${tile.bgA.join(',')})..rgb(${tile.bgB.join(',')}) noise ${tile.noise.toFixed(0).padStart(2)}  seeds ${tile.innerSeeds}/${tile.seeds.length}  tile ${tile.tilePx}px  box ${tile.box.join('x')}  -> ${file}`);
+  console.log(`${tile.name.padEnd(9)} bg rgb(${tile.bgA.join(',')})..rgb(${tile.bgB.join(',')}) noise ${tile.noise.toFixed(0).padStart(2)} tol ${tile.tol.toFixed(0)}/${tile.pageTol.toFixed(0)}  seeds ${tile.innerSeeds}/${tile.seeds.length}  tile ${tile.tilePx}px  box ${tile.box.join('x')}  -> ${file}`);
   if (tile.tilePx < 1000 || process.env.CUT_DEBUG) console.log(`  ${tile.tilePx < 1000 ? "WARNING: almost no tile background removed. " : ""}Sample patches (noise:colour): ${tile.seeds.map(([n, c]) => `${n}:${c.join(',')}`).join(' ')}`);
 }
 ws.close();

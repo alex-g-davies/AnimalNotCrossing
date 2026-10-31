@@ -1,7 +1,7 @@
 // The animals: names used in copy, and the icon shown on the board. The
-// icons are the owner's kawaii portraits (source sheet in art/, cut into
-// transparent PNGs by tools/cut-sheet.js). The Valley theme uses the pixel
-// sprites in animals-pixel.js instead.
+// icons are the owner's kawaii portraits (source sheets in art/, cut into
+// transparent PNGs by tools/cut-sheet.js): img/animals/ for most looks and
+// img/valley/ (the pixel-style set) for the Valley theme.
 
 export const ANIMALS = {
   cat: { name: 'cat', plural: 'cats' },
@@ -33,6 +33,7 @@ export const ANIMALS = {
 
 for (const [id, animal] of Object.entries(ANIMALS)) {
   animal.markup = `<img class="animal-img" src="img/animals/${id}.png" alt="" draggable="false">`;
+  animal.valleyMarkup = `<img class="animal-img" src="img/valley/${id}.png" alt="" draggable="false">`;
 }
 
 export const DEFAULT_ANIMAL = 'cat';

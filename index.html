@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="src/ui/style.css">
 </head>
 <body>
+  <div id="backdrop" aria-hidden="true"></div>
   <div id="app">
     <header id="top">
       <div id="subtitle"></div>
@@ -67,16 +68,6 @@
     </div>
   </div>
 
-  <div id="feedback" class="sheet-backdrop" hidden>
-    <div id="feedback-card" class="card" role="dialog" aria-modal="true" aria-labelledby="feedback-title">
-      <div class="stars" aria-hidden="true">★★★★★</div>
-      <h2 id="feedback-title"></h2>
-      <p id="feedback-text"></p>
-      <button id="btn-feedback-yes" class="primary" type="button"></button>
-      <button id="btn-feedback-no" class="link" type="button"></button>
-    </div>
-  </div>
-
   <div id="menu" class="sheet-backdrop" hidden>
     <div id="menu-card" class="card sheet" role="dialog" aria-modal="true" aria-label="Menu">
       <div class="sheet-handle"></div>
@@ -114,6 +105,7 @@
           <option value="auto">Match phone</option><option value="light">Light</option><option value="dark">Dark</option>
         </select></label>
         <label>Colors <select id="set-palette"></select></label>
+        <div id="random-palettes" class="checks" hidden></div>
         <label>Lines <select id="set-lines">
           <option value="fine">Fine</option><option value="normal">Normal</option><option value="bold">Bold</option><option value="heavy">Heavy</option>
         </select></label>

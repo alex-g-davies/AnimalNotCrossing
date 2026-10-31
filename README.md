@@ -31,7 +31,7 @@ The look can be previewed from the URL without saving it: `?palette=valley&anima
 - `src/core/techniques.js` is that deduction engine (levels 1 to 3, plus an optional lookahead level 4). It also grades difficulty and powers hints.
 - `src/core/solver.js` is a fast counting solver used as a second proof of uniqueness; `test/reference-solver.js` is a third, deliberately different one used only by tests and the bench.
 - `src/core/game.js` holds the game state as pure functions: taps, undo, mistakes, win and loss.
-- `src/core/climb.js` is climb mode: a ladder from 6×6 easy to 12×12 hard, each stage against a countdown, until a loss or the clock ends the run. `src/core/stats.js` keeps win streaks, compares each win with earlier ones at that size and difficulty for the end card, and decides when the once-every-ten-games feedback card is due; `src/core/spec.js` resolves the "random" size, difficulty, animal and colour settings once per puzzle.
+- `src/core/climb.js` is climb mode: a ladder from 6×6 easy to 12×12 hard, each stage against a countdown, until a loss or the clock ends the run. `src/core/stats.js` keeps win streaks, compares each win with earlier ones at that size and difficulty for the end card; `src/core/spec.js` resolves the "random" size, difficulty, animal and colour settings once per puzzle.
 - `src/messages.js` holds the messages shown after every game, about a third of them cheeky. Edit them freely.
 - `src/ui/advanced.js` is the icon shown by the menu's "Advanced mode" toggle in place of every animal.
 - The animal portraits come from one sheet, `art/Kawaii Animal Icon Grid.png`. To re-cut them after editing the sheet (4 columns, 3 rows, in menu order):
@@ -39,6 +39,10 @@ The look can be previewed from the URL without saving it: `?palette=valley&anima
   ```
   node tools/cut-sheet.js "art/Kawaii Animal Icon Grid.png" 4 3 256 img/animals cat,dog,bunny,fox,frog,duck,penguin,hedgehog,chicken,cow,pig,sheep
   node tools/cut-sheet.js "art/Cute Pastel Animal Faces Grid.png" 4 3 256 img/animals bear,panda,mouse,raccoon,lion,tiger,monkey,koala,deer,elephant,owl,seal
+  node tools/cut-sheet.js "art/Valley Pixel Grid 1.png" 4 4 256 img/valley cat,dog,bunny,fox,frog,duck,penguin,hedgehog,chicken,cow,pig,sheep
+  node tools/cut-sheet.js "art/Valley Pixel Grid 2.png" 4 4 256 img/valley bear,panda,mouse,raccoon,lion,tiger,monkey,koala,deer,elephant,owl,seal
+  node tools/cut-decor.js "art/Valley Pixel Grid 1.png" 24 905 1400 160 0.75 img/valley/farm.png left,right
+  node tools/cut-decor.js "art/Valley Pixel Grid 1.png" 24 24 82 106 1 img/valley/sprig.png bottom
   node tools/make-icons.js
   ```
 - Generation runs in a Web Worker and the next puzzle is prepared while the current one is being solved.

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { OVERALL, comboKeys, compareTime, feedbackDue, gamesPlayed, recordAbandon, recordResult, streaks } from '../src/core/stats.js';
+import { OVERALL, comboKeys, compareTime, recordAbandon, recordResult, streaks } from '../src/core/stats.js';
 
 const p8 = { n: 8, difficulty: 'medium' };
 const p6 = { n: 6, difficulty: 'easy' };
@@ -69,17 +69,3 @@ test('compareTime measures against earlier wins at the same combination', () => 
   assert.equal(compareTime(s, p6, 1).count, 0, 'other combinations do not mix in');
 });
 
-test('feedback is due every tenth finished game, once', () => {
-  let s = {};
-  assert.equal(feedbackDue(s, null), false);
-  for (let i = 0; i < 9; i++) s = recordResult(s, i % 2 ? p8 : p6, i % 3 !== 0, 1000);
-  assert.equal(gamesPlayed(s), 9);
-  assert.equal(feedbackDue(s, null), false);
-  s = recordResult(s, p8, false, 1000);
-  assert.equal(gamesPlayed(s), 10);
-  assert.equal(feedbackDue(s, null), true);
-  assert.equal(feedbackDue(s, { asked: 10 }), false, 'already shown at this count');
-  assert.equal(feedbackDue({ ...s, climb: { runs: 1 }, daily: { current: 1 } }, null), true, 'reserved keys are ignored');
-  for (let i = 0; i < 10; i++) s = recordResult(s, p8, true, 1000);
-  assert.equal(feedbackDue(s, { asked: 10 }), true);
-});

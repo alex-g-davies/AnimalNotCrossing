@@ -1,7 +1,7 @@
 // Wiring: owns the current game, settings, the worker and persistence.
 
 import { RANDOM, SIZES, resolveChoice, resolveSpec, specMatches } from './core/spec.js';
-import { comboKeys, compareTime, feedbackDue, gamesPlayed, recordAbandon, recordResult as recordStats, streaks } from './core/stats.js';
+import { comboKeys, compareTime, recordAbandon, recordResult as recordStats, streaks } from './core/stats.js';
 import { clearStage, newRun, recordRun, stageSpec } from './core/climb.js';
 import { randomSeed } from './core/rng.js';
 import * as game from './core/game.js';
@@ -11,10 +11,11 @@ import { LOSS_MESSAGES, WIN_MESSAGES, fillAnimal, nextMessage } from './messages
 import { KEYS, dumpAll, load, remove, requestPersistence, restoreAll, save } from './store/storage.js';
 import { ANIMALS, DEFAULT_ANIMAL, PAW_SVG } from './ui/animals.js';
 import { ADVANCED_SVG } from './ui/advanced.js';
-import { PIXEL_PAW, PIXEL_SPRITES } from './ui/animals-pixel.js';
+import { PIXEL_PAW } from './ui/animals-pixel.js';
+import { backdropMarkup } from './ui/backdrop.js';
 import { DEFAULT_PALETTE, PALETTES, applyPalette } from './ui/palettes.js';
 import { createBoard } from './ui/board.js';
-import { confetti, formatTime, hideEnd, hideHint, showEnd, showFeedback, showHint, showLoading } from './ui/screens.js';
+import { confetti, formatTime, hideEnd, hideHint, showEnd, showHint, showLoading } from './ui/screens.js';
 import {
   bindBar, bindMenu, closeMenu, createTimer, openMenu, renderMistakes, renderStats, setSubtitle, setUndoEnabled, syncMenu,
 } from './ui/controls.js';
@@ -31,6 +32,7 @@ const DEFAULT_SETTINGS = {
   animal: DEFAULT_ANIMAL,
   theme: 'auto',
   palette: DEFAULT_PALETTE,
+  randomPalettes: Object.keys(PALETTES), // the subset "random" picks from
   lines: 'normal',
   advanced: false,
 };
@@ -64,18 +66,23 @@ function isDark() {
 function pickLook() {
   return {
     animal: resolveChoice(settings.animal, Object.keys(ANIMALS)),
-    palette: resolveChoice(settings.palette, Object.keys(PALETTES)),
+    palette: resolveChoice(settings.palette, enabledPalettes()),
   };
 }
 function activeAnimal() {
   const id = settings.animal === RANDOM ? current && current.look && current.look.animal : settings.animal;
   return id in ANIMALS ? id : DEFAULT_ANIMAL;
 }
+// With colours on "random", only the ticked palettes are picked (all, if none are).
+function enabledPalettes() {
+  const ids = (Array.isArray(settings.randomPalettes) ? settings.randomPalettes : []).filter((id) => id in PALETTES);
+  return ids.length ? ids : Object.keys(PALETTES);
+}
 function activePalette() {
   const id = settings.palette === RANDOM ? current && current.look && current.look.palette : settings.palette;
   return id in PALETTES ? id : DEFAULT_PALETTE;
 }
-// The icon style follows the theme: Valley uses the pixel sprites.
+// The icon style follows the theme: Valley uses the pixel-style portraits.
 function pixelLook() {
   return activePalette() === 'valley';
 }
@@ -83,7 +90,7 @@ function pixelLook() {
 function animalSvg(id = activeAnimal()) {
   if (settings.advanced) return ADVANCED_SVG;
   const key = id in ANIMALS ? id : DEFAULT_ANIMAL;
-  return pixelLook() ? PIXEL_SPRITES[key] : ANIMALS[key].markup;
+  return pixelLook() ? ANIMALS[key].valleyMarkup : ANIMALS[key].markup;
 }
 function pawSvg() {
   return pixelLook() ? PIXEL_PAW : PAW_SVG;
@@ -94,8 +101,15 @@ function applyLook() {
   document.documentElement.dataset.palette = palette;
   document.documentElement.dataset.lines = LINE_WEIGHTS.includes(settings.lines) ? settings.lines : 'normal';
   applyPalette(palette, isDark());
+  applyBackdrop(palette);
   board.setAnimal(animalSvg());
   if (current) renderMistakes(game.mistakesLeft(current), current.mistakeLimit, pawSvg());
+}
+let backdropFor = null;
+function applyBackdrop(palette) {
+  if (backdropFor === palette) return;
+  backdropFor = palette;
+  document.getElementById('backdrop').innerHTML = backdropMarkup(palette);
 }
 darkQuery.addEventListener('change', applyLook);
 
@@ -465,7 +479,7 @@ function finish() {
     timeText: won ? `Time: ${formatTime(current.elapsedMs)} · Streak: ${streak}` : 'Here is how it fits together.',
     statText,
     artSvg: animalSvg(),
-    onNext: withFeedback(startNew),
+    onNext: startNew,
     onLook: () => hideEnd(),
   });
 }
@@ -478,27 +492,6 @@ function statTextFor(won, c, puzzle) {
   if (c.count === 0) return `Your first ${combo} win.`;
   const avg = c.pct > 0 ? `${c.pct}% faster than your average` : c.pct < 0 ? `${-c.pct}% slower than your average` : 'right on your average';
   return c.newBest ? `New best for ${combo}, ${avg}.` : `${capital(avg)} for ${combo}.`;
-}
-
-// Every tenth finished game, the "next" button first shows the feedback card.
-function withFeedback(then) {
-  return () => {
-    const feedback = load(KEYS.feedback, {}) || {};
-    if (!feedbackDue(load(KEYS.stats, {}) || {}, feedback)) return then();
-    const shown = { ratings: {}, ious: 0, later: 0, ...feedback, asked: gamesPlayed(load(KEYS.stats, {}) || {}) };
-    save(KEYS.feedback, shown);
-    hideEnd();
-    showFeedback({
-      onAnswer: (answers) => {
-        const f = load(KEYS.feedback, shown) || shown;
-        f.ratings = { ...(f.ratings || {}), [answers.rating]: ((f.ratings || {})[answers.rating] || 0) + 1 };
-        if (answers.iou) f.ious = (f.ious || 0) + 1;
-        else f.later = (f.later || 0) + 1;
-        save(KEYS.feedback, f);
-      },
-      onDone: then,
-    });
-  };
 }
 
 function finishClimb(won, message, statText) {
@@ -515,7 +508,7 @@ function finishClimb(won, message, statText) {
       statText,
       artSvg: animalSvg(),
       nextLabel: 'Next stage',
-      onNext: withFeedback(startClimbStage),
+      onNext: startClimbStage,
       onLook: () => hideEnd(),
     });
     return;
@@ -530,7 +523,7 @@ function finishClimb(won, message, statText) {
     timeText: `You reached stage ${reached} · Best: stage ${best}`,
     artSvg: animalSvg(),
     nextLabel: 'Climb again',
-    onNext: withFeedback(startClimb),
+    onNext: startClimb,
     onLook: () => hideEnd(),
   });
 }
@@ -571,9 +564,7 @@ function statsHtml() {
   });
   const c = stats.climb;
   const climbRow = c ? `<div class="stat"><b>Climb: stage ${c.bestStage}</b><span>best run · ${c.runs} run${c.runs === 1 ? '' : 's'} · ${fmt(c.bestStageMs)} to get there</span></div>` : '';
-  const f = load(KEYS.feedback, {}) || {};
-  const iouRow = f.ious || f.later ? `<div class="stat"><b>Owed to the developer: ${f.ious || 0} gawk gawk 9000${f.ious === 1 ? '' : 's'}</b><span>Deferred ${f.later || 0} time${f.later === 1 ? '' : 's'}. Collected in person; the app only keeps count.</span></div>` : '';
-  return `<div class="stat"><b>Win streak: ${overall.streak}</b><span>Best: ${overall.bestStreak}. A loss, or leaving a puzzle after a move, ends it.</span></div>${climbRow}${iouRow}${rows.join('')}`;
+  return `<div class="stat"><b>Win streak: ${overall.streak}</b><span>Best: ${overall.bestStreak}. A loss, or leaving a puzzle after a move, ends it.</span></div>${climbRow}${rows.join('')}`;
 }
 
 function exportData() {
@@ -618,6 +609,11 @@ function onSettingChange(key, value) {
   if (key === 'palette' || key === 'animal') {
     if (current) current = { ...current, look: pickLook() };
     persist();
+  }
+  if (key === 'randomPalettes' && current && settings.palette === RANDOM && !enabledPalettes().includes(activePalette())) {
+    current = { ...current, look: pickLook() };
+    persist();
+    applyLook();
   }
   if (key === 'theme' || key === 'palette' || key === 'animal' || key === 'advanced' || key === 'lines') applyLook();
   if (key === 'timer') timer.show(value || Boolean(current && current.puzzle.climb));

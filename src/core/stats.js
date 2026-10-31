@@ -67,17 +67,3 @@ export function compareTime(stats, puzzle, elapsedMs) {
   return { count, avg, pct, newBest, solved: entry.solved, lost: entry.lost };
 }
 
-// Games finished, won or lost, over every size and difficulty.
-export function gamesPlayed(stats) {
-  return comboKeys(stats).reduce((sum, key) => sum + ((stats[key].solved || 0) + (stats[key].lost || 0)), 0);
-}
-
-// The "enjoying the app?" card shows once every FEEDBACK_EVERY finished
-// games. `feedback` is the stored record { asked, ... }; `asked` is the game
-// count when it was last shown, so a reload cannot show it twice.
-export const FEEDBACK_EVERY = 10;
-
-export function feedbackDue(stats, feedback) {
-  const played = gamesPlayed(stats);
-  return played > 0 && played % FEEDBACK_EVERY === 0 && (!feedback || feedback.asked !== played);
-}

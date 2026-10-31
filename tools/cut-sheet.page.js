@@ -2,10 +2,12 @@
 // gaps, keys out each tile's flat background by flood fill, and gives the
 // anti-aliased edge partial alpha. Returns [{ name, dataUrl, debugUrl, bg, noise, box }].
 async function cut(b64, cols, rows, size, names) {
-  const STRICT = 14; // flood tolerance: this close to a background colour is background
+  const STRICT = 14; // flood tolerance for flat backgrounds; textured ones widen it (see tol below)
+  const MAX_TOL = 40;
   const SHADOW = 60; // looser tolerance for tinted drop shadows (a little darker than the tile, never outline-dark)
-  const LOOSE = 40; // smudges and tinted shadows: this far from a background colour...
-  const MAX_BLOB = 2500; // ...but only in blobs up to this many pixels, so a pink pig on a pink tile survives
+  const LOOSE = 50; // smudges, tinted shadows and tile frames: this far from a background colour...
+  const MAX_BLOB = 2500; // ...but only in blobs up to this many pixels, so a pink pig on a pink tile survives,
+  const THIN = 6; // ...or in blobs that are thin: every pixel this close to background already found
   const BAND = 3; // anti-aliased edge pixels next to the background get partial alpha
   const LO = 8, HI = 70; // colour distance mapped to alpha 0..1 inside the band
   const MARGIN = 10; // page pixels kept around each tile
@@ -29,11 +31,17 @@ async function cut(b64, cols, rows, size, names) {
     const q = [a[0] + t * v[0], a[1] + t * v[1], a[2] + t * v[2]];
     return { d: Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]), q };
   };
-  // Page colour: median of the sheet's outer border.
-  const border = [[], [], []];
-  for (let x = 0; x < W; x += 2) { px(x, 0).forEach((v, k) => border[k].push(v)); px(x, H - 1).forEach((v, k) => border[k].push(v)); }
-  for (let y = 0; y < H; y += 2) { px(0, y).forEach((v, k) => border[k].push(v)); px(W - 1, y).forEach((v, k) => border[k].push(v)); }
-  const page = border.map(median);
+  // Page colour: median along three lines just inside the sheet's edge (a
+  // sheet may carry a decorative border; corner ornaments are a minority of
+  // the samples). Its texture sets the page flood tolerance.
+  const lineSamples = [];
+  const yTop = Math.round(H * 0.03), xL = Math.round(W * 0.03), xR = W - 1 - xL;
+  for (let x = Math.round(W * 0.05); x < W * 0.95; x += 2) lineSamples.push(px(x, yTop));
+  for (let y = Math.round(H * 0.05); y < H * 0.95; y += 2) lineSamples.push(px(xL, y), px(xR, y));
+  const page = [0, 1, 2].map((k) => median(lineSamples.map((p) => p[k])));
+  const pageDists = lineSamples.map((p) => Math.hypot(p[0] - page[0], p[1] - page[1], p[2] - page[2])).sort((a, b) => a - b);
+  const pageNoise = pageDists[Math.floor(pageDists.length * 0.9)];
+  const pageTol = Math.min(MAX_TOL, Math.max(STRICT, pageNoise * 1.6));
   // Tiles: runs of rows/columns that are mostly not page-coloured.
   const bands = (length, count, probe) => {
     const out = [];
@@ -77,7 +85,10 @@ async function cut(b64, cols, rows, size, names) {
     // extended towards black for plain shadows. The animal itself is never
     // reached by the floods below unless it touches the background, so a face
     // close to the tile colour is safe behind its outline.
-    const tilePatches = seeds.filter(([, , n, col]) => n <= STRICT && Math.hypot(col[0] - bg[0], col[1] - bg[1], col[2] - bg[2]) <= 60).map(([, , , col]) => col).sort((p, q) => luma(p) - luma(q));
+    // A checkered or grainy tile has a higher "noise" on its flattest patch; the
+    // tolerance follows it. Outlines keep the floods out of the animal regardless.
+    const tol = Math.min(MAX_TOL, Math.max(STRICT, noise * 1.8));
+    const tilePatches = seeds.filter(([, , n, col]) => n <= tol && Math.hypot(col[0] - bg[0], col[1] - bg[1], col[2] - bg[2]) <= 60).map(([, , , col]) => col).sort((p, q) => luma(p) - luma(q));
     const bgA = tilePatches[tilePatches.length - 1] || bg; // lightest
     const bgB = tilePatches[0] || bg; // darkest
     const dark = bgB.map((v) => v * 0.45);
@@ -107,16 +118,16 @@ async function cut(b64, cols, rows, size, names) {
     const edge = [];
     for (let x = 0; x < cw; x++) edge.push(x, 0, x, ch - 1);
     for (let y = 0; y < ch; y++) edge.push(0, y, cw - 1, y);
-    flood(edge, (x, y) => dist(x, y, page) <= STRICT);
+    flood(edge, (x, y) => dist(x, y, page) <= pageTol);
     // 2. The tile, from the sample points: tile colour and its plain shadows.
     const inner = [];
-    for (const [sx, sy, n, col] of seeds) if (n <= STRICT && tileDist(col) <= STRICT) inner.push(sx, sy);
+    for (const [sx, sy, n, col] of seeds) if (n <= tol && tileDist(col) <= tol) inner.push(sx, sy);
     const innerSeeds = inner.length / 2;
     // Also from wherever the page touches the tile, so a pocket of tile colour
     // enclosed by the animal and the tile's edge is still found.
     for (let k = 0; k < cw * ch; k++) if (depth[k] === 0) { const x = k % cw, y = (k / cw) | 0; inner.push(x + 1, y, x - 1, y, x, y + 1, x, y - 1); }
     const pagePx = depth.reduce((n, v) => n + (v === 0 ? 1 : 0), 0);
-    flood(inner, (x, y) => tileDist(px(x, y)) <= STRICT);
+    flood(inner, (x, y) => tileDist(px(x, y)) <= tol);
     const tilePx = depth.reduce((n, v) => n + (v === 0 ? 1 : 0), 0) - pagePx;
     // 3. Tinted drop shadows: darker than the tile and loosely on its shadow
     //    line, growing out of the background already found. Dropped entirely;
@@ -125,11 +136,27 @@ async function cut(b64, cols, rows, size, names) {
     for (let k = 0; k < cw * ch; k++) if (depth[k] === 0) { const x = k % cw, y = (k / cw) | 0; grow.push(x + 1, y, x - 1, y, x, y + 1, x, y - 1); }
     flood(grow, (x, y) => { const p = px(x, y); const l = luma(p); return l < bgLuma - 3 && l > bgLuma - 45 && tileDist(p) <= SHADOW; });
 
-    // 4. Smudges and leftover shadow: a looser flood from the background,
-    //    kept only where it forms small blobs. Large regions (an animal whose
-    //    body is close to the tile colour) are put back.
+    // 4. Smudges, leftover shadow and a tile's own thin frame: a looser flood
+    //    from the background, kept only where it forms small or thin blobs.
+    //    Large solid regions (an animal whose body is close to the tile
+    //    colour) are put back.
     const loose = new Uint8Array(cw * ch);
     {
+      const nearBg = new Uint8Array(cw * ch);
+      let ring = [];
+      for (let k = 0; k < cw * ch; k++) if (depth[k] === 0) { nearBg[k] = 1; ring.push(k); }
+      for (let step = 0; step < THIN; step++) {
+        const next = [];
+        for (const k of ring) {
+          const x = k % cw, y = (k / cw) | 0;
+          for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
+            if (nx < 0 || ny < 0 || nx >= cw || ny >= ch) continue;
+            const nk = ny * cw + nx;
+            if (!nearBg[nk]) { nearBg[nk] = 1; next.push(nk); }
+          }
+        }
+        ring = next;
+      }
       let queue = [];
       for (let k = 0; k < cw * ch; k++) if (depth[k] === 0) { const x = k % cw, y = (k / cw) | 0; queue.push(x + 1, y, x - 1, y, x, y + 1, x, y - 1); }
       while (queue.length) {
@@ -157,7 +184,45 @@ async function cut(b64, cols, rows, size, names) {
             if (loose[nk] && label[nk] === -1) { label[nk] = k; blob.push(nk); }
           }
         }
-        if (blob.length <= MAX_BLOB) for (const b of blob) depth[b] = 0;
+        if (blob.length <= MAX_BLOB || blob.every((b) => nearBg[b])) for (const b of blob) depth[b] = 0;
+      }
+    }
+    // 5. Whatever is left that is thin and detached (a tile's own frame line,
+    //    a stray fleck) goes too, whatever its colour: a connected piece whose
+    //    every pixel lies within THIN of the background. The animal always has
+    //    an interior farther away than that, so it is never touched.
+    {
+      const nearBg = new Uint8Array(cw * ch);
+      let ring = [];
+      for (let k = 0; k < cw * ch; k++) if (depth[k] === 0) { nearBg[k] = 1; ring.push(k); }
+      for (let step = 0; step < THIN; step++) {
+        const next = [];
+        for (const k of ring) {
+          const x = k % cw, y = (k / cw) | 0;
+          for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
+            if (nx < 0 || ny < 0 || nx >= cw || ny >= ch) continue;
+            const nk = ny * cw + nx;
+            if (!nearBg[nk]) { nearBg[nk] = 1; next.push(nk); }
+          }
+        }
+        ring = next;
+      }
+      const seen = new Uint8Array(cw * ch);
+      for (let k = 0; k < cw * ch; k++) {
+        if (depth[k] !== -1 || seen[k]) continue;
+        const piece = [k];
+        seen[k] = 1;
+        let thin = true;
+        for (let i = 0; i < piece.length; i++) {
+          const x = piece[i] % cw, y = (piece[i] / cw) | 0;
+          if (!nearBg[piece[i]]) thin = false;
+          for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
+            if (nx < 0 || ny < 0 || nx >= cw || ny >= ch) continue;
+            const nk = ny * cw + nx;
+            if (depth[nk] === -1 && !seen[nk]) { seen[nk] = 1; piece.push(nk); }
+          }
+        }
+        if (thin) for (const p of piece) depth[p] = 0;
       }
     }
     let frontier = [];
@@ -203,7 +268,7 @@ async function cut(b64, cols, rows, size, names) {
     const dbg = ctx.createImageData(cw, ch);
     for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) { const k = y * cw + x, v = d(x0 + x, y0 + y); const g = depth[k] === 0 ? 255 : v >= HI ? 0 : 60 + Math.round(v / HI * 150); dbg.data[k * 4] = g; dbg.data[k * 4 + 1] = depth[k] > 0 ? 0 : g; dbg.data[k * 4 + 2] = g; dbg.data[k * 4 + 3] = 255; }
     const dc = document.createElement('canvas'); dc.width = cw; dc.height = ch; dc.getContext('2d').putImageData(dbg, 0, 0);
-    out.push({ name, dataUrl: o.toDataURL('image/png'), debugUrl: dc.toDataURL('image/png'), bg, bgA, bgB, noise, box: [x0 + minX, y0 + minY, bw, bh], innerSeeds, tilePx, seeds: seeds.map(([, , n, col]) => [Math.round(n), col]) });
+    out.push({ name, dataUrl: o.toDataURL('image/png'), debugUrl: dc.toDataURL('image/png'), bg, bgA, bgB, noise, tol, pageTol, box: [x0 + minX, y0 + minY, bw, bh], innerSeeds, tilePx, seeds: seeds.map(([, , n, col]) => [Math.round(n), col]) });
   }
   return out;
 }

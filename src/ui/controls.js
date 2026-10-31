@@ -110,8 +110,20 @@ export function bindMenu({ settings, sizes, animals, palettes, onChange, onClose
   for (const [key, [id, prop, cast]] of Object.entries(fields)) {
     const input = $(id);
     input[prop] = settings[key];
-    input.addEventListener('change', () => onChange(key, cast(input[prop])));
+    input.addEventListener('change', () => {
+      onChange(key, cast(input[prop]));
+      syncMenu(settings);
+    });
   }
+  // Which palettes "random" may pick: one checkbox each, at least one ticked.
+  const picker = $('random-palettes');
+  picker.innerHTML = palettes.map(([id, p]) => `<label class="row"><input type="checkbox" data-id="${id}"> ${p.name}</label>`).join('');
+  picker.addEventListener('change', (event) => {
+    const boxes = [...picker.querySelectorAll('input')];
+    if (!boxes.some((b) => b.checked)) event.target.checked = true;
+    onChange('randomPalettes', boxes.filter((b) => b.checked).map((b) => b.dataset.id));
+  });
+  syncMenu(settings);
   $('btn-menu-close').addEventListener('click', onClose);
   $('menu').addEventListener('click', (event) => {
     if (event.target === $('menu')) onClose();
@@ -128,6 +140,10 @@ export function bindMenu({ settings, sizes, animals, palettes, onChange, onClose
 export function syncMenu(settings) {
   $('set-size').value = String(settings.n);
   $('set-difficulty').value = settings.difficulty;
+  const picker = $('random-palettes');
+  picker.hidden = settings.palette !== 'random';
+  const chosen = Array.isArray(settings.randomPalettes) ? settings.randomPalettes : [];
+  for (const box of picker.querySelectorAll('input')) box.checked = chosen.length === 0 || chosen.includes(box.dataset.id);
 }
 
 export function openMenu() {
