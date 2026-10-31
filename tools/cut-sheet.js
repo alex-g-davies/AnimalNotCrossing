@@ -71,7 +71,8 @@ for (const tile of res.result.result.value) {
   const file = join(outdir, `${tile.name}.png`);
   writeFileSync(file, Buffer.from(tile.dataUrl.split(',')[1], 'base64'));
   if (process.env.CUT_DEBUG) writeFileSync(join(process.env.CUT_DEBUG, `${tile.name}-mask.png`), Buffer.from(tile.debugUrl.split(',')[1], 'base64'));
-  console.log(`${tile.name.padEnd(9)} bg rgb(${tile.bg.join(',')}) noise ${tile.noise.toFixed(0).padStart(2)}  box ${tile.box.join('x')}  -> ${file}`);
+  console.log(`${tile.name.padEnd(9)} bg rgb(${tile.bgA.join(',')})..rgb(${tile.bgB.join(',')}) noise ${tile.noise.toFixed(0).padStart(2)}  seeds ${tile.innerSeeds}/${tile.seeds.length}  tile ${tile.tilePx}px  box ${tile.box.join('x')}  -> ${file}`);
+  if (tile.tilePx < 1000 || process.env.CUT_DEBUG) console.log(`  ${tile.tilePx < 1000 ? "WARNING: almost no tile background removed. " : ""}Sample patches (noise:colour): ${tile.seeds.map(([n, c]) => `${n}:${c.join(',')}`).join(' ')}`);
 }
 ws.close();
 proc.kill();

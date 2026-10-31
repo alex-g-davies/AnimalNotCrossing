@@ -2,7 +2,7 @@
 // works with no signal. Change CACHE_VERSION on every deploy (see CLAUDE.md)
 // or players keep the old files.
 
-const CACHE_VERSION = 'anc-v11';
+const CACHE_VERSION = 'anc-v12';
 
 const FILES = [
   './',
@@ -45,6 +45,18 @@ const FILES = [
   './img/animals/cow.png',
   './img/animals/pig.png',
   './img/animals/sheep.png',
+  './img/animals/bear.png',
+  './img/animals/panda.png',
+  './img/animals/mouse.png',
+  './img/animals/raccoon.png',
+  './img/animals/lion.png',
+  './img/animals/tiger.png',
+  './img/animals/monkey.png',
+  './img/animals/koala.png',
+  './img/animals/deer.png',
+  './img/animals/elephant.png',
+  './img/animals/owl.png',
+  './img/animals/seal.png',
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',

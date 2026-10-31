@@ -16,6 +16,19 @@ export const ANIMALS = {
   cow: { name: 'cow', plural: 'cows' },
   pig: { name: 'pig', plural: 'pigs' },
   sheep: { name: 'sheep', plural: 'sheep' },
+  // Second sheet (art/Cute Pastel Animal Faces Grid.png), same order.
+  bear: { name: 'bear', plural: 'bears' },
+  panda: { name: 'panda', plural: 'pandas' },
+  mouse: { name: 'mouse', plural: 'mice' },
+  raccoon: { name: 'raccoon', plural: 'raccoons' },
+  lion: { name: 'lion', plural: 'lions' },
+  tiger: { name: 'tiger', plural: 'tigers' },
+  monkey: { name: 'monkey', plural: 'monkeys' },
+  koala: { name: 'koala', plural: 'koalas' },
+  deer: { name: 'deer', plural: 'deer' },
+  elephant: { name: 'elephant', plural: 'elephants' },
+  owl: { name: 'owl', plural: 'owls' },
+  seal: { name: 'seal', plural: 'seals' },
 };
 
 for (const [id, animal] of Object.entries(ANIMALS)) {

@@ -58,7 +58,9 @@ async function cut(b64, cols, rows, size, names) {
     // Tile colour: the flattest 12px patch among several inset points that is not page-coloured.
     let bg = null, noise = Infinity;
     const seeds = [];
-    for (const [fx, fy] of [[0.15, 0.15], [0.85, 0.15], [0.15, 0.85], [0.85, 0.85], [0.5, 0.08], [0.5, 0.92], [0.08, 0.5], [0.92, 0.5]]) {
+    const points = [[0.15, 0.15], [0.85, 0.15], [0.15, 0.85], [0.85, 0.85], [0.5, 0.08], [0.5, 0.92], [0.08, 0.5], [0.92, 0.5],
+      [0.3, 0.08], [0.7, 0.08], [0.3, 0.92], [0.7, 0.92], [0.08, 0.3], [0.08, 0.7], [0.92, 0.3], [0.92, 0.7]];
+    for (const [fx, fy] of points) {
       const ox = x0 + Math.round(cw * fx) - 6, oy = y0 + Math.round(ch * fy) - 6;
       const patch = [[], [], []];
       for (let dy = 0; dy < 12; dy++) for (let dx = 0; dx < 12; dx++) px(ox + dx, oy + dy).forEach((v, k) => patch[k].push(v));
@@ -69,11 +71,20 @@ async function cut(b64, cols, rows, size, names) {
       if (n < noise) { noise = n; bg = col; }
       seeds.push([ox - x0 + 6, oy - y0 + 6, n, col]);
     }
-    const dark = bg.map((v) => v * 0.45);
     const luma = (p) => 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2];
-    const bgLuma = luma(bg);
+    // Tiles may carry a gentle gradient, so the tile colour is the segment
+    // between the lightest and darkest flat patches that match it (bgA..bgB),
+    // extended towards black for plain shadows. The animal itself is never
+    // reached by the floods below unless it touches the background, so a face
+    // close to the tile colour is safe behind its outline.
+    const tilePatches = seeds.filter(([, , n, col]) => n <= STRICT && Math.hypot(col[0] - bg[0], col[1] - bg[1], col[2] - bg[2]) <= 60).map(([, , , col]) => col).sort((p, q) => luma(p) - luma(q));
+    const bgA = tilePatches[tilePatches.length - 1] || bg; // lightest
+    const bgB = tilePatches[0] || bg; // darkest
+    const dark = bgB.map((v) => v * 0.45);
+    const bgLuma = luma(bgB);
+    const tileDist = (p) => Math.min(segDist(p, bgA, bgB).d, segDist(p, bgB, dark).d);
     // Distance to the nearest background colour, for the edge band.
-    const near = (x, y) => { const p = px(x, y); const a = segDist(p, bg, page), b = segDist(p, bg, dark); return a.d <= b.d ? a : b; };
+    const near = (x, y) => { const p = px(x, y); return [segDist(p, bgA, bgB), segDist(p, bgB, dark), segDist(p, bg, page)].reduce((m, c) => (c.d < m.d ? c : m)); };
     const d = (x, y) => near(x, y).d;
     const depth = new Int16Array(cw * ch).fill(-1);
     const flood = (seedList, accept) => {
@@ -99,14 +110,20 @@ async function cut(b64, cols, rows, size, names) {
     flood(edge, (x, y) => dist(x, y, page) <= STRICT);
     // 2. The tile, from the sample points: tile colour and its plain shadows.
     const inner = [];
-    for (const [sx, sy, n, col] of seeds) if (n <= STRICT && Math.hypot(col[0] - bg[0], col[1] - bg[1], col[2] - bg[2]) <= STRICT) inner.push(sx, sy);
-    flood(inner, (x, y) => segDist(px(x, y), bg, dark).d <= STRICT);
+    for (const [sx, sy, n, col] of seeds) if (n <= STRICT && tileDist(col) <= STRICT) inner.push(sx, sy);
+    const innerSeeds = inner.length / 2;
+    // Also from wherever the page touches the tile, so a pocket of tile colour
+    // enclosed by the animal and the tile's edge is still found.
+    for (let k = 0; k < cw * ch; k++) if (depth[k] === 0) { const x = k % cw, y = (k / cw) | 0; inner.push(x + 1, y, x - 1, y, x, y + 1, x, y - 1); }
+    const pagePx = depth.reduce((n, v) => n + (v === 0 ? 1 : 0), 0);
+    flood(inner, (x, y) => tileDist(px(x, y)) <= STRICT);
+    const tilePx = depth.reduce((n, v) => n + (v === 0 ? 1 : 0), 0) - pagePx;
     // 3. Tinted drop shadows: darker than the tile and loosely on its shadow
     //    line, growing out of the background already found. Dropped entirely;
     //    the app adds its own shadow in CSS.
     const grow = [];
     for (let k = 0; k < cw * ch; k++) if (depth[k] === 0) { const x = k % cw, y = (k / cw) | 0; grow.push(x + 1, y, x - 1, y, x, y + 1, x, y - 1); }
-    flood(grow, (x, y) => { const p = px(x, y); const l = luma(p); return l < bgLuma - 3 && l > bgLuma - 45 && segDist(p, bg, dark).d <= SHADOW; });
+    flood(grow, (x, y) => { const p = px(x, y); const l = luma(p); return l < bgLuma - 3 && l > bgLuma - 45 && tileDist(p) <= SHADOW; });
 
     // 4. Smudges and leftover shadow: a looser flood from the background,
     //    kept only where it forms small blobs. Large regions (an animal whose
@@ -186,7 +203,7 @@ async function cut(b64, cols, rows, size, names) {
     const dbg = ctx.createImageData(cw, ch);
     for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) { const k = y * cw + x, v = d(x0 + x, y0 + y); const g = depth[k] === 0 ? 255 : v >= HI ? 0 : 60 + Math.round(v / HI * 150); dbg.data[k * 4] = g; dbg.data[k * 4 + 1] = depth[k] > 0 ? 0 : g; dbg.data[k * 4 + 2] = g; dbg.data[k * 4 + 3] = 255; }
     const dc = document.createElement('canvas'); dc.width = cw; dc.height = ch; dc.getContext('2d').putImageData(dbg, 0, 0);
-    out.push({ name, dataUrl: o.toDataURL('image/png'), debugUrl: dc.toDataURL('image/png'), bg, noise, box: [x0 + minX, y0 + minY, bw, bh] });
+    out.push({ name, dataUrl: o.toDataURL('image/png'), debugUrl: dc.toDataURL('image/png'), bg, bgA, bgB, noise, box: [x0 + minX, y0 + minY, bw, bh], innerSeeds, tilePx, seeds: seeds.map(([, , n, col]) => [Math.round(n), col]) });
   }
   return out;
 }

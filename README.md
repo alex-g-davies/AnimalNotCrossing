@@ -38,6 +38,7 @@ The look can be previewed from the URL without saving it: `?palette=valley&anima
 
   ```
   node tools/cut-sheet.js "art/Kawaii Animal Icon Grid.png" 4 3 256 img/animals cat,dog,bunny,fox,frog,duck,penguin,hedgehog,chicken,cow,pig,sheep
+  node tools/cut-sheet.js "art/Cute Pastel Animal Faces Grid.png" 4 3 256 img/animals bear,panda,mouse,raccoon,lion,tiger,monkey,koala,deer,elephant,owl,seal
   node tools/make-icons.js
   ```
 - Generation runs in a Web Worker and the next puzzle is prepared while the current one is being solved.
