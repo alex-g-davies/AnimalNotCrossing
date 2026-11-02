@@ -9,8 +9,9 @@
 export const OVERALL = 'overall';
 export const RESERVED = new Set([OVERALL, 'daily', 'climb', 'climbs']);
 
+// "8-medium", or "8-medium-double" for Double Up (two animals per line).
 export function comboKey(puzzle) {
-  return `${puzzle.n}-${puzzle.difficulty}`;
+  return `${puzzle.n}-${puzzle.difficulty}${puzzle.k === 2 ? '-double' : ''}`;
 }
 
 function entryFor(stats, key) {

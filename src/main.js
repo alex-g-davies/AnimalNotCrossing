@@ -1,6 +1,6 @@
 // Wiring: owns the current game, settings, the worker and persistence.
 
-import { RANDOM, SIZES, resolveChoice, resolveSpec, specMatches } from './core/spec.js';
+import { MODES, RANDOM, resolveChoice, resolveSpec, sizesFor, specMatches } from './core/spec.js';
 import { compareTime, recordAbandon, recordResult as recordStats, streaks } from './core/stats.js';
 import { DEFAULT_OPTIONS as CLIMB_DEFAULTS, clearStage, describeOptions, newRun, normalizeOptions, optionsKey, recordRun, stageSpec } from './core/climb.js';
 import { randomSeed } from './core/rng.js';
@@ -16,7 +16,7 @@ import { DEFAULT_PALETTE, FESTIVE_PALETTE, PALETTES, applyPalette } from './ui/p
 import { createBoard } from './ui/board.js';
 import { confetti, formatTime, hideEnd, hideHint, showEnd, showHint, showLoading } from './ui/screens.js';
 import {
-  bindBar, bindMenu, bindStats, closeMenu, createTimer, openMenu, openStats, renderMistakes, renderStats, setAnimalOptions, setSubtitle, setUndoEnabled, syncMenu,
+  bindBar, bindMenu, bindStats, closeMenu, createTimer, openMenu, openStats, renderMistakes, renderStats, setAnimalOptions, setSizeOptions, setSubtitle, setUndoEnabled, syncMenu,
 } from './ui/controls.js';
 import { statsPageHtml } from './ui/statspage.js';
 
@@ -25,6 +25,7 @@ const LINE_WEIGHTS = ['fine', 'normal', 'bold', 'heavy'];
 const DEFAULT_SETTINGS = {
   n: 8,
   difficulty: 'medium',
+  mode: 'single', // 'single' (one animal per line) or 'double' (Double Up: two)
   tapMode: 'hold',
   autoMark: false,
   relaxed: false,
@@ -48,7 +49,7 @@ if (settings.tapMode === 'mark-first' || settings.tapMode === 'animal-first') se
 // Look settings can be previewed from the URL (?style=valley&animal=cow&theme=dark)
 // without being saved; handy for sharing a look and for screenshots.
 const params = new URLSearchParams(location.search);
-for (const key of ['style', 'palette', 'animal', 'theme', 'lines']) if (params.has(key)) settings[key] = params.get(key);
+for (const key of ['style', 'palette', 'animal', 'theme', 'lines', 'mode']) if (params.has(key)) settings[key] = params.get(key);
 if (params.has('animal') && ANIMALS[params.get('animal')] && ANIMALS[params.get('animal')].festive) settings.festiveAnimal = params.get('animal');
 // Until Nov 2026 "Valley" was a palette that also switched the whole look. It
 // is now the Valley style plus the "Farm" colours; old saves are mapped.
@@ -158,11 +159,11 @@ function freshSeed() {
   return seed;
 }
 
-function generate(n, difficulty, seed = freshSeed()) {
+function generate(n, difficulty, seed = freshSeed(), k = 1) {
   const id = nextId++;
   return new Promise((resolve, reject) => {
     waiting.set(id, { resolve, reject });
-    worker.postMessage({ id, n, seed, difficulty });
+    worker.postMessage({ id, n, seed, difficulty, k });
   });
 }
 
@@ -172,7 +173,7 @@ async function prepareNext() {
   if (nextPuzzle && specMatches(settings, nextPuzzle)) return;
   if (pending && specMatches(settings, pending)) return;
   const spec = resolveSpec(settings);
-  const promise = generate(spec.n, spec.difficulty);
+  const promise = generate(spec.n, spec.difficulty, freshSeed(), spec.k);
   pending = { ...spec, promise };
   try {
     const puzzle = await promise;
@@ -197,7 +198,7 @@ async function takePuzzle() {
     if (pending && specMatches(settings, pending)) puzzle = await pending.promise;
     else {
       const spec = resolveSpec(settings);
-      puzzle = await generate(spec.n, spec.difficulty);
+      puzzle = await generate(spec.n, spec.difficulty, freshSeed(), spec.k);
     }
     if (nextPuzzle === puzzle) nextPuzzle = null;
     return puzzle;
@@ -238,7 +239,7 @@ function startGame(puzzle, saved = null) {
 
 function subtitleFor(puzzle) {
   if (puzzle.daily) return `Daily · ${puzzle.daily}`;
-  const base = `${puzzle.n} × ${puzzle.n} · ${capital(puzzle.difficulty)}`;
+  const base = `${puzzle.n} × ${puzzle.n} · ${capital(puzzle.difficulty)}${puzzle.k === 2 ? ' · Double Up' : ''}`;
   return puzzle.climb ? `Stage ${puzzle.climb} · ${base}` : base;
 }
 
@@ -526,7 +527,7 @@ function finish() {
 // One line under the time: how this game compares with earlier ones at the
 // same size and difficulty.
 function statTextFor(won, c, puzzle) {
-  const combo = `${puzzle.n} × ${puzzle.n} ${capital(puzzle.difficulty)}`;
+  const combo = `${puzzle.n} × ${puzzle.n} ${capital(puzzle.difficulty)}${puzzle.k === 2 ? ' Double Up' : ''}`;
   if (!won) return c.solved ? `Won ${c.solved} of ${c.solved + c.lost + 1} at ${combo}.` : '';
   if (c.count === 0) return `Your first ${combo} win.`;
   const avg = c.pct > 0 ? `${c.pct}% faster than your average` : c.pct < 0 ? `${-c.pct}% slower than your average` : 'right on your average';
@@ -651,7 +652,8 @@ function onSettingChange(key, value) {
     persist();
     if (current.status !== 'playing') finish();
   }
-  if (key === 'n' || key === 'difficulty') {
+  if (key === 'n' || key === 'difficulty' || key === 'mode') {
+    if (key === 'mode') setSizeOptions(sizesFor(settings.mode), settings.n);
     if (nextPuzzle && !specMatches(settings, nextPuzzle)) nextPuzzle = null;
     prepareNext();
   }
@@ -678,7 +680,8 @@ bindBar({
 
 bindMenu({
   settings,
-  sizes: SIZES,
+  sizes: sizesFor(settings.mode),
+  modes: Object.entries(MODES),
   animals: animalIds(false).map((id) => [id, ANIMALS[id]]),
   palettes: Object.entries(PALETTES),
   onChange: onSettingChange,

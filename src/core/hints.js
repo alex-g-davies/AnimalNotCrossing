@@ -8,17 +8,17 @@
 // If the board already contradicts the stored solution, the hint says so
 // first (kind: 'mistake') instead of reasoning from a wrong position.
 
-import { ANIMAL, MARK } from './rules.js';
+import { ANIMAL, MARK, isSolutionCell } from './rules.js';
 import { createState, findDeduction } from './techniques.js';
 
 export function hintFor(puzzle, board, { animal = 'cat', maxLevel = 3 } = {}) {
-  const { n, solution } = puzzle;
+  const { n } = puzzle;
   const wrongAnimals = [];
   const wrongMarks = [];
   for (let r = 0; r < n; r++) {
     for (let c = 0; c < n; c++) {
-      if (board[r][c] === ANIMAL && solution[r] !== c) wrongAnimals.push(r * n + c);
-      if (board[r][c] === MARK && solution[r] === c) wrongMarks.push(r * n + c);
+      if (board[r][c] === ANIMAL && !isSolutionCell(puzzle, r, c)) wrongAnimals.push(r * n + c);
+      if (board[r][c] === MARK && isSolutionCell(puzzle, r, c)) wrongMarks.push(r * n + c);
     }
   }
   if (wrongAnimals.length) {
@@ -73,6 +73,10 @@ function textFor(d, animal) {
   switch (d.technique) {
     case 'single':
       return `${capital(unit)} has only one spot left for a ${animal}.`;
+    case 'fill':
+      return `${capital(unit)} has exactly the spots it still needs, so every one of them gets a ${animal}.`;
+    case 'fit':
+      return `Two ${plural(animal)} must fit in ${unit} without touching, and only some spots can be part of such a pair.`;
     case 'region-in-line':
       return `Every spot left in this region sits in ${describeUnit(d.line)}, so the rest of that ${d.line.type === 'row' ? 'row' : 'column'} can't hold a ${animal}.`;
     case 'line-in-region':

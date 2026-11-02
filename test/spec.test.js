@@ -5,8 +5,8 @@ import { createRng } from '../src/core/rng.js';
 import { DIFFICULTY_NAMES } from '../src/core/difficulty.js';
 
 test('fixed settings resolve to themselves', () => {
-  assert.deepEqual(resolveSpec({ n: 8, difficulty: 'medium' }), { n: 8, difficulty: 'medium' });
-  assert.deepEqual(resolveSpec({ n: '10', difficulty: 'hard' }), { n: 10, difficulty: 'hard' });
+  assert.deepEqual(resolveSpec({ n: 8, difficulty: 'medium' }), { n: 8, difficulty: 'medium', k: 1 });
+  assert.deepEqual(resolveSpec({ n: '10', difficulty: 'hard' }), { n: 10, difficulty: 'hard', k: 1 });
 });
 
 test('random settings pick from the whole pool, deterministically for a seeded rng', () => {

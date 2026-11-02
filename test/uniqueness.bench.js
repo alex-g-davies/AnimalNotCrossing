@@ -1,6 +1,9 @@
 // Volume verification and performance benchmark. Writes PERF.md.
 //
-//   node test/uniqueness.bench.js [--count 1000] [--sizes 6-12] [--difficulties easy,medium,hard]
+//   node test/uniqueness.bench.js [--count 1000] [--sizes 6-12] [--difficulties easy,medium,hard] [--modes 1,2]
+//
+// Mode 1 is the classic game, mode 2 is Double Up (two animals per line,
+// sizes 8 to 11 only); both run by default.
 //
 // For every size and difficulty it generates `count` puzzles, verifies each
 // with the independent reference solver and the grader, and records timing,
@@ -11,7 +14,7 @@
 import { writeFileSync } from 'node:fs';
 import os from 'node:os';
 import { createRng } from '../src/core/rng.js';
-import { generatePuzzle, growRegions, placeAnimals, MIN_SIZE, MAX_SIZE } from '../src/core/generator.js';
+import { generatePuzzle, growRegions, placeAnimals, MIN_SIZE, MAX_SIZE, MIN_DOUBLE_SIZE, MAX_DOUBLE_SIZE } from '../src/core/generator.js';
 import { countSolutions } from '../src/core/solver.js';
 import { gradePuzzle, MEDIUM_MAX_LEVEL3_STEPS } from '../src/core/difficulty.js';
 import { referenceCount } from './reference-solver.js';
@@ -20,43 +23,49 @@ const args = parseArgs(process.argv.slice(2));
 const count = Number(args.count || 1000);
 const [sizeLo, sizeHi] = (args.sizes || `${MIN_SIZE}-${MAX_SIZE}`).split('-').map(Number);
 const difficulties = (args.difficulties || 'easy,medium,hard').split(',');
+const modes = (args.modes || '1,2').split(',').map(Number);
 
 const TARGETS = {
-  8: { median: 100, p95: 500 },
-  10: { median: 1000, p95: 2000 },
-  12: { median: 2000, p95: 4000 },
+  1: { 8: { median: 100, p95: 500 }, 10: { median: 1000, p95: 2000 }, 12: { median: 2000, p95: 4000 } },
+  // Double Up is pre-generated in the background while the previous puzzle is
+  // played, so it may take longer: the budget is the classic one two sizes up.
+  2: { 8: { median: 1000, p95: 2000 }, 10: { median: 2000, p95: 4000 }, 11: { median: 2000, p95: 8000 } },
 };
 
 const rows = [];
 let failures = 0;
 
-for (let n = sizeLo; n <= sizeHi; n++) {
+for (const k of modes) {
+  const lo = k === 2 ? Math.max(sizeLo, MIN_DOUBLE_SIZE) : sizeLo;
+  const hi = k === 2 ? Math.min(sizeHi, MAX_DOUBLE_SIZE) : sizeHi;
+  for (let n = lo; n <= hi; n++) {
   for (const difficulty of difficulties) {
     const times = [];
     const placements = [];
     const evals = [];
     const level3Steps = [];
     const rejected = { unsolved: 0, badShape: 0, wrongDifficulty: 0 };
-    const seedBase = n * 1_000_000 + difficulties.indexOf(difficulty) * 100_000;
+    const seedBase = n * 1_000_000 + difficulties.indexOf(difficulty) * 100_000 + (k - 1) * 10_000_000;
     for (let i = 0; i < count; i++) {
       const seed = seedBase + i;
       const t0 = performance.now();
-      const puzzle = generatePuzzle({ n, seed, difficulty });
+      const puzzle = generatePuzzle({ n, seed, difficulty, k });
       times.push(performance.now() - t0);
       placements.push(puzzle.stats.placements);
       evals.push(puzzle.stats.evals);
-      for (const k of Object.keys(rejected)) rejected[k] += puzzle.stats[k];
+      for (const key of Object.keys(rejected)) rejected[key] += puzzle.stats[key];
       level3Steps.push(puzzle.grade.levelCounts[3]);
 
       // Verification by the independent solver and the grader.
       const ref = referenceCount(puzzle, 2);
       const grade = gradePuzzle(puzzle);
-      if (ref.count !== 1 || ref.solutions[0].join() !== puzzle.solution.join() || !grade.solved || grade.label !== difficulty) {
+      if (ref.count !== 1 || JSON.stringify(ref.solutions[0]) !== JSON.stringify(puzzle.solution) || !grade.solved || grade.label !== difficulty) {
         failures++;
-        console.error(`FAIL ${n}x${n} ${difficulty} seed ${seed}: count ${ref.count}, grade ${grade.label}`);
+        console.error(`FAIL ${n}x${n} ${difficulty} k${k} seed ${seed}: count ${ref.count}, grade ${grade.label}`);
       }
     }
     const row = {
+      k,
       n,
       difficulty,
       count,
@@ -69,7 +78,8 @@ for (let n = sizeLo; n <= sizeHi; n++) {
       level3: { median: quantile(level3Steps, 0.5), p95: quantile(level3Steps, 0.95) },
     };
     rows.push(row);
-    console.log(`${n}x${n} ${difficulty.padEnd(6)} median ${row.median.toFixed(0).padStart(5)} ms  p95 ${row.p95.toFixed(0).padStart(5)} ms  max ${row.max.toFixed(0).padStart(5)} ms  placements/puzzle ${row.placements.toFixed(2)}  evals/puzzle ${row.evals.toFixed(0)}`);
+    console.log(`${k === 2 ? 'double ' : ''}${n}x${n} ${difficulty.padEnd(6)} median ${row.median.toFixed(0).padStart(5)} ms  p95 ${row.p95.toFixed(0).padStart(5)} ms  max ${row.max.toFixed(0).padStart(5)} ms  placements/puzzle ${row.placements.toFixed(2)}  evals/puzzle ${row.evals.toFixed(0)}`);
+  }
   }
 }
 
@@ -102,22 +112,24 @@ function report() {
   lines.push('');
   lines.push('## Time to generate one accepted puzzle');
   lines.push('');
-  lines.push('| Size | Difficulty | Puzzles | Median | p95 | Max | Target (median / p95) | Placements per puzzle | Repair moves per puzzle | Level-3 steps (median / p95) |');
-  lines.push('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |');
+  lines.push('"Double Up" rows are the two-animals-per-line mode (sizes 8 to 11). 12x12 Double Up measured a median of about 5 s and a worst case of 28 s on this machine, so it is not offered.');
+  lines.push('');
+  lines.push('| Mode | Size | Difficulty | Puzzles | Median | p95 | Max | Target (median / p95) | Placements per puzzle | Repair moves per puzzle | Level-3 steps (median / p95) |');
+  lines.push('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |');
   for (const r of rows) {
-    const target = TARGETS[r.n];
+    const target = TARGETS[r.k][r.n];
     const targetText = target ? `${target.median} / ${target.p95} ms ${r.median <= target.median && r.p95 <= target.p95 ? 'met' : 'MISSED'}` : '';
-    lines.push(`| ${r.n}x${r.n} | ${r.difficulty} | ${r.count} | ${r.median.toFixed(0)} ms | ${r.p95.toFixed(0)} ms | ${r.max.toFixed(0)} ms | ${targetText} | ${r.placements.toFixed(2)} | ${r.evals.toFixed(0)} | ${r.level3.median} / ${r.level3.p95} |`);
+    lines.push(`| ${r.k === 2 ? 'Double Up' : 'classic'} | ${r.n}x${r.n} | ${r.difficulty} | ${r.count} | ${r.median.toFixed(0)} ms | ${r.p95.toFixed(0)} ms | ${r.max.toFixed(0)} ms | ${targetText} | ${r.placements.toFixed(2)} | ${r.evals.toFixed(0)} | ${r.level3.median} / ${r.level3.p95} |`);
   }
   lines.push('');
   lines.push('## Rejections per accepted puzzle');
   lines.push('');
   lines.push('A placement is rejected when repair stalls (unsolved), when a region breaks the shape rules, or when the graded difficulty differs from the requested one.');
   lines.push('');
-  lines.push('| Size | Difficulty | Unsolved | Bad shape | Wrong difficulty |');
-  lines.push('| --- | --- | --- | --- | --- |');
+  lines.push('| Mode | Size | Difficulty | Unsolved | Bad shape | Wrong difficulty |');
+  lines.push('| --- | --- | --- | --- | --- | --- |');
   for (const r of rows) {
-    lines.push(`| ${r.n}x${r.n} | ${r.difficulty} | ${(r.rejected.unsolved / r.count).toFixed(2)} | ${(r.rejected.badShape / r.count).toFixed(2)} | ${(r.rejected.wrongDifficulty / r.count).toFixed(2)} |`);
+    lines.push(`| ${r.k === 2 ? 'Double Up' : 'classic'} | ${r.n}x${r.n} | ${r.difficulty} | ${(r.rejected.unsolved / r.count).toFixed(2)} | ${(r.rejected.badShape / r.count).toFixed(2)} | ${(r.rejected.wrongDifficulty / r.count).toFixed(2)} |`);
   }
   lines.push('');
   lines.push('## Why the generator repairs instead of retrying');

@@ -7,7 +7,7 @@
 // X marks never count. Undo removes the piece but does not refund the
 // mistake. Reaching the limit ends the game as a loss, unless `relaxed`.
 
-import { ANIMAL, EMPTY, MARK, emptyBoard, findConflicts, isSolved } from './rules.js';
+import { ANIMAL, EMPTY, MARK, cellsRuledOut, emptyBoard, findConflicts, isSolutionCell, isSolved, solutionCells } from './rules.js';
 
 export const MISTAKE_LIMITS = { easy: 5, medium: 4, hard: 3 };
 
@@ -45,7 +45,7 @@ function nextValue(current, tapMode) {
 
 export function setCell(state, r, c, value) {
   if (state.status !== 'playing') return state;
-  const { n, solution, regions } = state.puzzle;
+  const { n } = state.puzzle;
   const before = state.board[r][c];
   if (before === value) return state;
   const board = state.board.map((row) => row.slice());
@@ -54,19 +54,14 @@ export function setCell(state, r, c, value) {
   const entry = { r, c, before, after: value, autoMarked: [] };
   let mistakes = state.mistakes;
   if (value === ANIMAL) {
-    if (solution[r] !== c) {
+    if (!isSolutionCell(state.puzzle, r, c)) {
       mistakes++;
       entry.mistake = true;
     } else if (state.settings.autoMark) {
-      for (let rr = 0; rr < n; rr++) {
-        for (let cc = 0; cc < n; cc++) {
-          if (board[rr][cc] !== EMPTY) continue;
-          const touching = Math.abs(rr - r) <= 1 && Math.abs(cc - c) <= 1;
-          if (rr === r || cc === c || regions[rr][cc] === regions[r][c] || touching) {
-            board[rr][cc] = MARK;
-            entry.autoMarked.push(rr * n + cc);
-          }
-        }
+      for (const i of cellsRuledOut(board, state.puzzle, r, c)) {
+        if (board[Math.floor(i / n)][i % n] !== EMPTY) continue;
+        board[Math.floor(i / n)][i % n] = MARK;
+        entry.autoMarked.push(i);
       }
     }
   }
@@ -131,19 +126,18 @@ export function conflicts(state) {
 
 // Animals currently on the board that are off the solution, for the mistake tint.
 export function wrongAnimals(state) {
-  const { n, solution } = state.puzzle;
+  const { n } = state.puzzle;
   const out = [];
   for (let r = 0; r < n; r++) {
-    for (let c = 0; c < n; c++) if (state.board[r][c] === ANIMAL && solution[r] !== c) out.push(r * n + c);
+    for (let c = 0; c < n; c++) if (state.board[r][c] === ANIMAL && !isSolutionCell(state.puzzle, r, c)) out.push(r * n + c);
   }
   return out;
 }
 
 // After a loss: show the answer. Keeps status 'lost'.
 export function reveal(state) {
-  const { n, solution } = state.puzzle;
-  const board = emptyBoard(n);
-  for (let r = 0; r < n; r++) board[r][solution[r]] = ANIMAL;
+  const board = emptyBoard(state.puzzle.n);
+  for (const [r, c] of solutionCells(state.puzzle)) board[r][c] = ANIMAL;
   return { ...state, board };
 }
 

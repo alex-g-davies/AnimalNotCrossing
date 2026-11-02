@@ -8,9 +8,16 @@
 // (eliminated) or ANIMAL. Those values match the board constants in rules.js
 // (EMPTY, MARK, ANIMAL) so a player's board can be loaded directly.
 //
+// Every unit (row, column, region) needs k animals: 1 in the classic game,
+// 2 in Double Up. "Need" below is how many a unit still lacks. The classic
+// techniques generalise by counting: a group of units whose candidates fit
+// in a set of lines that need exactly as many animals must take them all.
+//
 // Every technique is sound: it only eliminates cells that cannot hold an
 // animal in any solution. So if deduction fills the board, that filling is
 // the puzzle's only solution.
+
+import { perLine } from './rules.js';
 
 export const UNKNOWN = 0;
 export const OUT = 1;
@@ -25,6 +32,7 @@ export const LEVEL_NAMES = {
 
 export function createState(puzzle, board = null) {
   const { n, regions } = puzzle;
+  const k = perLine(puzzle);
   const cells = new Uint8Array(n * n);
   const regionCells = Array.from({ length: n }, () => []);
   for (let r = 0; r < n; r++) {
@@ -48,7 +56,7 @@ export function createState(puzzle, board = null) {
     col: Array.from({ length: n }, (_, c) => Array.from({ length: n }, (_, r) => r * n + c)),
     region: regionCells,
   };
-  const state = { n, regions, regionCells, cells, rowIndex, colIndex, regionIndex, units };
+  const state = { n, k, regions, regionCells, cells, rowIndex, colIndex, regionIndex, units };
   // A board loaded from the player may hold animals whose eliminations have
   // not been applied yet; apply them so the engine starts from a consistent view.
   if (board) {
@@ -61,17 +69,18 @@ export function cloneState(state) {
   return { ...state, cells: new Uint8Array(state.cells) };
 }
 
-// Everything a placed animal rules out: its row, column, region and the
-// eight cells around it.
+function unitAnimals(state, type, index) {
+  let k = 0;
+  for (const i of state.units[type][index]) if (state.cells[i] === ANIMAL) k++;
+  return k;
+}
+
+// Everything a placed animal rules out: the eight cells around it, and its
+// row, column and region once they hold their k animals.
 function eliminateAround(state, index) {
-  const { n, regions, regionCells, cells } = state;
-  const r = Math.floor(index / n);
-  const c = index % n;
-  for (let i = 0; i < n; i++) {
-    if (cells[r * n + i] === UNKNOWN) cells[r * n + i] = OUT;
-    if (cells[i * n + c] === UNKNOWN) cells[i * n + c] = OUT;
-  }
-  for (const j of regionCells[regions[r][c]]) if (cells[j] === UNKNOWN) cells[j] = OUT;
+  const { n, cells, k } = state;
+  const r = state.rowIndex[index];
+  const c = state.colIndex[index];
   for (let dr = -1; dr <= 1; dr++) {
     for (let dc = -1; dc <= 1; dc++) {
       const nr = r + dr;
@@ -80,22 +89,25 @@ function eliminateAround(state, index) {
       if (cells[nr * n + nc] === UNKNOWN) cells[nr * n + nc] = OUT;
     }
   }
+  for (const [type, unit] of [['row', r], ['col', c], ['region', state.regionIndex[index]]]) {
+    if (unitAnimals(state, type, unit) < k) continue;
+    for (const i of state.units[type][unit]) if (cells[i] === UNKNOWN) cells[i] = OUT;
+  }
 }
 
 // Units are rows, columns and regions. Each has an index 0..n-1.
 const UNIT_TYPES = ['row', 'col', 'region'];
 
-function unitCells(state, type, index) {
-  return state.units[type][index];
+// How many animals a unit still needs.
+function unitNeed(state, type, index) {
+  return state.k - unitAnimals(state, type, index);
 }
 
-// Unknown cells of a unit, or null when the unit already holds its animal.
+// Unknown cells of a unit, or null when the unit already has its animals.
 function unitCandidates(state, type, index) {
+  if (unitNeed(state, type, index) <= 0) return null;
   const out = [];
-  for (const i of unitCells(state, type, index)) {
-    if (state.cells[i] === ANIMAL) return null;
-    if (state.cells[i] === UNKNOWN) out.push(i);
-  }
+  for (const i of state.units[type][index]) if (state.cells[i] === UNKNOWN) out.push(i);
   return out;
 }
 
@@ -109,16 +121,20 @@ function regionOf(state, i) {
   return state.regionIndex[i];
 }
 
-// True when placing an animal at `a` would rule out cell `b`.
+function adjacent(state, a, b) {
+  return a !== b && Math.abs(state.rowIndex[a] - state.rowIndex[b]) <= 1 && Math.abs(state.colIndex[a] - state.colIndex[b]) <= 1;
+}
+
+// True when placing an animal at `a` would rule out cell `b`: b touches a,
+// or shares a row, column or region that a would fill up.
 function sees(state, a, b) {
   if (a === b) return false;
-  const ra = state.rowIndex[a];
-  const ca = state.colIndex[a];
-  const rb = state.rowIndex[b];
-  const cb = state.colIndex[b];
-  if (ra === rb || ca === cb) return true;
-  if (state.regionIndex[a] === state.regionIndex[b]) return true;
-  return Math.abs(ra - rb) <= 1 && Math.abs(ca - cb) <= 1;
+  if (adjacent(state, a, b)) return true;
+  const ra = state.rowIndex[a], ca = state.colIndex[a];
+  if (ra === state.rowIndex[b] && unitNeed(state, 'row', ra) <= 1) return true;
+  if (ca === state.colIndex[b] && unitNeed(state, 'col', ca) <= 1) return true;
+  const ga = state.regionIndex[a];
+  return ga === state.regionIndex[b] && unitNeed(state, 'region', ga) <= 1;
 }
 
 export function applyDeduction(state, d) {
@@ -142,8 +158,8 @@ export function animalCount(state) {
 }
 
 // ---------------------------------------------------------------------------
-// Level 1: a unit with a single candidate gets its animal.
-// (A unit with no candidates and no animal is a contradiction.)
+// Level 1: a unit with exactly as many candidates as it still needs gets
+// them all (one per step). A unit with fewer is a contradiction.
 
 function findLevel1(state) {
   const { n } = state;
@@ -151,9 +167,10 @@ function findLevel1(state) {
     for (let index = 0; index < n; index++) {
       const cands = unitCandidates(state, type, index);
       if (cands === null) continue;
-      if (cands.length === 0) return { contradiction: true, unit: { type, index } };
-      if (cands.length === 1) {
-        return { level: 1, technique: 'single', unit: { type, index }, place: cands[0], eliminate: [] };
+      const need = unitNeed(state, type, index);
+      if (cands.length < need) return { contradiction: true, unit: { type, index } };
+      if (cands.length === need) {
+        return { level: 1, technique: need === 1 ? 'single' : 'fill', unit: { type, index }, place: cands[0], eliminate: [] };
       }
     }
   }
@@ -161,10 +178,46 @@ function findLevel1(state) {
 }
 
 // ---------------------------------------------------------------------------
-// Level 2: confinement between a region and a line (row or column).
-//  - All candidates of a region lie in one row: the rest of that row is out.
-//  - All candidates of a row lie in one region: the rest of that region is out.
-//  (And the same with columns.)
+// Level 2a (Double Up): fitting. A unit that needs two animals can only use
+// pairs of candidates that do not touch. Cells in no such pair are out; a
+// cell in every such pair is forced.
+
+function findFit(state) {
+  const { n, k } = state;
+  if (k < 2) return null;
+  for (const type of UNIT_TYPES) {
+    for (let index = 0; index < n; index++) {
+      const cands = unitCandidates(state, type, index);
+      if (cands === null || unitNeed(state, type, index) !== 2) continue;
+      const inSome = new Set();
+      const inAll = new Set(cands);
+      let pairs = 0;
+      for (let i = 0; i < cands.length; i++) {
+        for (let j = i + 1; j < cands.length; j++) {
+          if (adjacent(state, cands[i], cands[j])) continue;
+          pairs++;
+          inSome.add(cands[i]);
+          inSome.add(cands[j]);
+          for (const x of inAll) if (x !== cands[i] && x !== cands[j]) inAll.delete(x);
+        }
+      }
+      if (pairs === 0) return { contradiction: true, unit: { type, index } };
+      const eliminate = cands.filter((i) => !inSome.has(i));
+      const forced = [...inAll];
+      if (eliminate.length || forced.length) {
+        return { level: 2, technique: 'fit', unit: { type, index }, place: forced.length ? forced[0] : null, eliminate };
+      }
+    }
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Level 2b: confinement between a region and a line (row or column).
+//  - All candidates of a region lie in one row, and that row needs exactly
+//    what the region needs: the rest of that row is out.
+//  - All candidates of a row lie in one region, likewise: the rest of that
+//    region is out. (And the same with columns.)
 
 function findLevel2(state) {
   const { n } = state;
@@ -175,7 +228,8 @@ function findLevel2(state) {
       const pick = line === 'row' ? rowOf : colOf;
       const first = pick(state, cands[0]);
       if (!cands.every((i) => pick(state, i) === first)) continue;
-      const eliminate = unitCandidates(state, line, first).filter((i) => regionOf(state, i) !== region);
+      if (unitNeed(state, line, first) !== unitNeed(state, 'region', region)) continue;
+      const eliminate = (unitCandidates(state, line, first) || []).filter((i) => regionOf(state, i) !== region);
       if (eliminate.length) {
         return { level: 2, technique: 'region-in-line', unit: { type: 'region', index: region }, line: { type: line, index: first }, eliminate };
       }
@@ -187,8 +241,9 @@ function findLevel2(state) {
       if (cands === null || cands.length === 0) continue;
       const first = regionOf(state, cands[0]);
       if (!cands.every((i) => regionOf(state, i) === first)) continue;
+      if (unitNeed(state, 'region', first) !== unitNeed(state, line, index)) continue;
       const pick = line === 'row' ? rowOf : colOf;
-      const eliminate = unitCandidates(state, 'region', first).filter((i) => pick(state, i) !== index);
+      const eliminate = (unitCandidates(state, 'region', first) || []).filter((i) => pick(state, i) !== index);
       if (eliminate.length) {
         return { level: 2, technique: 'line-in-region', unit: { type: line, index }, line: { type: 'region', index: first }, eliminate };
       }
@@ -198,34 +253,30 @@ function findLevel2(state) {
 }
 
 // ---------------------------------------------------------------------------
-// Level 3a: group confinement. k regions whose candidates together span only
-// k rows must take those rows, so other regions are out of those rows.
-// Also the reverse (k rows confined to k regions) and the same for columns.
+// Level 3a: group confinement. A few regions whose candidates together span
+// only lines that need exactly as many animals as those regions do must
+// take those lines, so other regions are out of them. Also the reverse
+// (lines confined to regions), and the same for columns.
 
-function bitCount(mask) {
-  let k = 0;
-  while (mask) {
-    mask &= mask - 1;
-    k++;
-  }
-  return k;
-}
-
-function findGroupConfinement(state, k) {
+function findGroupConfinement(state, groupSize) {
   const { n } = state;
   for (const line of ['row', 'col']) {
     const pick = line === 'row' ? rowOf : colOf;
     // regionLines[region] = bitmask of lines its candidates touch (null if done)
     const regionLines = [];
     const lineRegions = [];
+    const regionNeed = [];
+    const lineNeed = [];
     for (let i = 0; i < n; i++) {
       const rc = unitCandidates(state, 'region', i);
       regionLines.push(rc === null ? null : rc.reduce((m, c) => m | (1 << pick(state, c)), 0));
+      regionNeed.push(unitNeed(state, 'region', i));
       const lc = unitCandidates(state, line, i);
       lineRegions.push(lc === null ? null : lc.reduce((m, c) => m | (1 << regionOf(state, c)), 0));
+      lineNeed.push(unitNeed(state, line, i));
     }
     // Regions -> lines
-    let found = searchGroups(regionLines, k, (groupMask, unionMask) => {
+    let found = searchGroups(regionLines, regionNeed, lineNeed, groupSize, (groupMask, unionMask) => {
       const eliminate = [];
       for (let l = 0; l < n; l++) {
         if (!(unionMask & (1 << l))) continue;
@@ -235,9 +286,9 @@ function findGroupConfinement(state, k) {
       }
       return eliminate;
     });
-    if (found) return { level: 3, technique: `${k}-regions-in-${line}s`, ...found };
+    if (found) return { level: 3, technique: `${groupSize}-regions-in-${line}s`, ...found };
     // Lines -> regions
-    found = searchGroups(lineRegions, k, (groupMask, unionMask) => {
+    found = searchGroups(lineRegions, lineNeed, regionNeed, groupSize, (groupMask, unionMask) => {
       const eliminate = [];
       for (let region = 0; region < n; region++) {
         if (!(unionMask & (1 << region))) continue;
@@ -247,19 +298,26 @@ function findGroupConfinement(state, k) {
       }
       return eliminate;
     });
-    if (found) return { level: 3, technique: `${k}-${line}s-in-regions`, ...found };
+    if (found) return { level: 3, technique: `${groupSize}-${line}s-in-regions`, ...found };
   }
   return null;
 }
 
-// Enumerates k-subsets of units whose candidate masks union to exactly k
-// bits, and returns the first one with a non-empty elimination list.
-function searchGroups(masks, k, eliminationsFor) {
+function needOfMask(mask, needs) {
+  let total = 0;
+  for (let i = 0; mask; i++, mask >>>= 1) if (mask & 1) total += Math.max(0, needs[i]);
+  return total;
+}
+
+// Enumerates groups of `size` units whose candidate masks union to a set of
+// units needing exactly as many animals as the group does, and returns the
+// first one with a non-empty elimination list.
+function searchGroups(masks, groupNeeds, unionNeeds, size, eliminationsFor) {
   const n = masks.length;
   const chosen = [];
-  function rec(start, unionMask) {
-    if (chosen.length === k) {
-      if (bitCount(unionMask) !== k) return null;
+  function rec(start, unionMask, groupNeed) {
+    if (chosen.length === size) {
+      if (needOfMask(unionMask, unionNeeds) !== groupNeed) return null;
       const groupMask = chosen.reduce((m, i) => m | (1 << i), 0);
       const eliminate = eliminationsFor(groupMask, unionMask);
       return eliminate.length ? { group: chosen.slice(), eliminate } : null;
@@ -267,19 +325,21 @@ function searchGroups(masks, k, eliminationsFor) {
     for (let i = start; i < n; i++) {
       if (masks[i] === null || masks[i] === 0) continue;
       const next = unionMask | masks[i];
-      if (bitCount(next) > k) continue;
+      const need = groupNeed + groupNeeds[i];
+      // The union can only grow, so once it needs more than the group it is no use.
+      if (needOfMask(next, unionNeeds) > need + (size - chosen.length - 1) * Math.max(...groupNeeds)) continue;
       chosen.push(i);
-      const hit = rec(i + 1, next);
+      const hit = rec(i + 1, next, need);
       chosen.pop();
       if (hit) return hit;
     }
     return null;
   }
-  return rec(0, 0);
+  return rec(0, 0, 0);
 }
 
 // Level 3b: a cell that sees every candidate of some unit (that it does not
-// belong to) cannot hold an animal, because placing it would empty that unit.
+// belong to) cannot hold an animal, because placing it would starve that unit.
 
 function findSeesAll(state) {
   const { n, cells } = state;
@@ -326,7 +386,7 @@ function findLevel4(state) {
 
 // The next deduction at the lowest level that yields one, or null when stuck.
 export function findDeduction(state, maxLevel = 3) {
-  const finders = [findLevel1, findLevel2, findLevel3, findLevel4];
+  const finders = [findLevel1, (s) => findFit(s) || findLevel2(s), findLevel3, findLevel4];
   for (let level = 1; level <= Math.min(maxLevel, 4); level++) {
     const d = finders[level - 1](state);
     if (d) return d;
@@ -336,12 +396,12 @@ export function findDeduction(state, maxLevel = 3) {
 
 // Runs deductions until solved or stuck. Mutates `state`.
 export function runDeduction(state, maxLevel = 3) {
-  const { n } = state;
+  const { n, k } = state;
   const levelCounts = [0, 0, 0, 0, 0];
   let steps = 0;
   let maxLevelUsed = 0;
   for (;;) {
-    if (animalCount(state) === n) return { solved: true, contradiction: false, steps, maxLevelUsed, levelCounts };
+    if (animalCount(state) === n * k) return { solved: true, contradiction: false, steps, maxLevelUsed, levelCounts };
     const d = findDeduction(state, maxLevel);
     if (!d) return { solved: false, contradiction: false, steps, maxLevelUsed, levelCounts };
     if (d.contradiction) return { solved: false, contradiction: true, steps, maxLevelUsed, levelCounts };

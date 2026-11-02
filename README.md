@@ -1,7 +1,7 @@
 # Animal Not Crossing
 
 A free, ad-free, offline logic puzzle for one player, installed on an iPhone as a home-screen web app.
-Place one animal in every row, column and colored region, with no two animals touching, even diagonally.
+Place one animal in every row, column and colored region, with no two animals touching, even diagonally. "Double Up" mode asks for two per row, column and region instead (8×8 to 11×11).
 Every puzzle has exactly one solution and can be solved by deduction alone.
 
 Static files only (plus one locally bundled open-licence font for the Valley theme): no backend, accounts, analytics, ads, dependencies or build step.
@@ -31,7 +31,8 @@ The look can be previewed from the URL without saving it: `?style=valley&palette
 - `src/core/techniques.js` is that deduction engine (levels 1 to 3, plus an optional lookahead level 4). It also grades difficulty and powers hints.
 - `src/core/solver.js` is a fast counting solver used as a second proof of uniqueness; `test/reference-solver.js` is a third, deliberately different one used only by tests and the bench.
 - `src/core/game.js` holds the game state as pure functions: taps, undo, mistakes, win and loss.
-- `src/core/climb.js` is climb mode: a ladder from 6×6 easy to 12×12 hard, each stage against a countdown, until a loss or the clock ends the run. `src/core/stats.js` keeps win streaks, compares each win with earlier ones at that size and difficulty for the end card; `src/core/spec.js` resolves the "random" size, difficulty, animal and colour settings once per puzzle.
+- `src/core/climb.js` is climb mode: a ladder from 6×6 easy to 12×12 hard, each stage against a countdown, until a loss or the clock ends the run. The menu's Advanced section can cap the board, change the ramp and tighten the clock; such custom ladders keep their own best. `src/core/stats.js` keeps win streaks, play time and per-combination times, which the Stats page (`src/ui/statspage.js`) shows with trends; `src/core/spec.js` resolves the "random" size, difficulty, animal and colour settings once per puzzle, and the mode (classic or Double Up, `k` animals per line).
+- The look is a Style (normal, or the pixel-art Valley look) plus a colour palette. The Christmas palette adds snow and swaps in the festive animal set.
 - `src/messages.js` holds the messages shown after every game, about a third of them cheeky. Edit them freely.
 - The animal portraits come from one sheet, `art/Kawaii Animal Icon Grid.png`. To re-cut them after editing the sheet (4 columns, 3 rows, in menu order):
 
@@ -40,8 +41,14 @@ The look can be previewed from the URL without saving it: `?style=valley&palette
   node tools/cut-sheet.js "art/Cute Pastel Animal Faces Grid.png" 4 3 256 img/animals bear,panda,mouse,raccoon,lion,tiger,monkey,koala,deer,elephant,owl,seal
   node tools/cut-sheet.js "art/Valley Pixel Grid 1.png" 4 4 256 img/valley cat,dog,bunny,fox,frog,duck,penguin,hedgehog,chicken,cow,pig,sheep
   node tools/cut-sheet.js "art/Valley Pixel Grid 2.png" 4 4 256 img/valley bear,panda,mouse,raccoon,lion,tiger,monkey,koala,deer,elephant,owl,seal
-  node tools/cut-decor.js "art/Valley Pixel Grid 1.png" 24 905 1400 160 0.75 img/valley/farm.png left,right
-  node tools/cut-decor.js "art/Valley Pixel Grid 1.png" 24 24 82 106 1 img/valley/sprig.png bottom
+  node tools/cut-sheet.js "art/Aquatic Animal Grid.png" 4 3 256 img/animals clownfish,dolphin,whale,octopus,turtle,shark,crab,seahorse,jellyfish,pufferfish,sealpup,narwhal
+  node tools/cut-sheet.js "art/Valley Aquatic Grid.png" 4 4 256 img/valley clownfish,dolphin,whale,octopus,turtle,shark,crab,seahorse,jellyfish,pufferfish,sealpup,narwhal
+  node tools/cut-sheet.js "art/Christmas Animal Grid.png" 4 3 256 img/animals reindeer,polarbear,xmas-penguin,xmas-fox,xmas-bunny,xmas-mouse,squirrel,robin,xmas-cat,xmas-dog,xmas-sheep,xmas-hedgehog
+  node tools/cut-sheet.js "art/Valley Christmas Grid.png" 4 4 256 img/valley reindeer,polarbear,xmas-penguin,xmas-fox,xmas-bunny,xmas-mouse,squirrel,robin,xmas-cat,xmas-dog,xmas-sheep,xmas-hedgehog
+  node tools/cut-decor.js "art/Valley Pixel Grid 1.png" 24 905 1400 160 0.75 img/valley/farm.png top "#fde5b0"
+  node tools/cut-decor.js "art/Valley Pixel Grid 1.png" 24 24 78 106 1 img/valley/sprig.png bottom
+  node tools/cut-decor.js "art/Valley Christmas Grid.png" 24 905 1400 160 0.75 img/valley/farm-snow.png top "#fde5b0"
+  node tools/cut-decor.js "art/Valley Christmas Grid.png" 24 24 78 106 1 img/valley/holly.png bottom
   node tools/make-icons.js
   ```
 - Generation runs in a Web Worker and the next puzzle is prepared while the current one is being solved.

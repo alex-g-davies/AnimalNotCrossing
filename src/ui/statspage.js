@@ -45,11 +45,11 @@ export function statsPageHtml(stats, { today, formatTime }) {
     const times = (e.times || []).filter(Number.isFinite);
     const sorted = times.slice().sort((a, b) => a - b);
     const median = sorted.length ? sorted[Math.floor(sorted.length / 2)] : null;
-    const [n, difficulty] = key.split('-');
+    const [n, difficulty, mode] = key.split('-');
     const t = trend(times);
     const trendText = t === null ? '' : t.pct > 0 ? `Recent wins ${t.pct}% quicker than your earlier ones.` : t.pct < 0 ? `Recent wins ${-t.pct}% slower than your earlier ones.` : 'Recent wins right on your earlier pace.';
     const line = `${e.solved} solved · ${e.lost} lost · best ${fmt(e.best)} · median ${fmt(median)} · streak ${e.streak || 0}, best ${e.bestStreak || 0}`;
-    return stat(`${n} × ${n} · ${capital(difficulty)}`, line, sparkline(times), trendText);
+    return stat(`${n} × ${n} · ${capital(difficulty)}${mode === 'double' ? ' · Double Up' : ''}`, line, sparkline(times), trendText);
   })));
 
   return sections.join('');

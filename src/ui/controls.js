@@ -89,13 +89,15 @@ export function createTimer(el, format) {
 }
 
 // Fills the selects, mirrors `settings` into the form, and reports changes.
-export function bindMenu({ settings, sizes, animals, palettes, onChange, onClose, onExport, onImport }) {
-  fill($('set-size'), [...sizes.map((n) => [String(n), n >= 12 ? `${n} × ${n} (large)` : `${n} × ${n}`]), ['random', 'Random']]);
+export function bindMenu({ settings, sizes, modes = [], animals, palettes, onChange, onClose, onExport, onImport }) {
+  setSizeOptions(sizes, settings.n);
+  if (modes.length) fill($('set-mode'), modes);
   fill($('set-animal'), [...animals.map(([id, a]) => [id, capital(a.name)]), ['random', 'Random each puzzle']]);
   fill($('set-palette'), [...palettes.map(([id, p]) => [id, p.name]), ['random', 'Random each puzzle']]);
 
   const fields = {
     n: ['set-size', 'value', (v) => (v === 'random' ? v : Number(v))],
+    mode: ['set-mode', 'value', String],
     difficulty: ['set-difficulty', 'value', String],
     tapMode: ['set-tap', 'value', String],
     autoMark: ['set-auto-mark', 'checked', Boolean],
@@ -140,6 +142,13 @@ export function bindMenu({ settings, sizes, animals, palettes, onChange, onClose
   });
 }
 
+// The sizes on offer depend on the mode (Double Up starts at 8x8). A chosen
+// size that is no longer offered shows as the smallest one that is.
+export function setSizeOptions(sizes, value) {
+  fill($('set-size'), [...sizes.map((n) => [String(n), n >= 12 ? `${n} × ${n} (large)` : `${n} × ${n}`]), ['random', 'Random']]);
+  $('set-size').value = value === 'random' ? value : String(Math.min(sizes[sizes.length - 1], Math.max(sizes[0], Number(value))));
+}
+
 // The Animal select lists one set at a time (everyday or festive).
 let animalOptionsKey = '';
 export function setAnimalOptions(animals, value) {
@@ -152,7 +161,8 @@ export function setAnimalOptions(animals, value) {
 }
 
 export function syncMenu(settings) {
-  $('set-size').value = String(settings.n);
+  const sizes = [...$('set-size').options].map((o) => o.value).filter((v) => v !== 'random').map(Number);
+  $('set-size').value = settings.n === 'random' ? 'random' : String(Math.min(sizes[sizes.length - 1], Math.max(sizes[0], Number(settings.n))));
   $('set-difficulty').value = settings.difficulty;
   const picker = $('random-palettes');
   picker.hidden = settings.palette !== 'random';
