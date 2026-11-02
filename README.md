@@ -33,7 +33,6 @@ The look can be previewed from the URL without saving it: `?style=valley&palette
 - `src/core/game.js` holds the game state as pure functions: taps, undo, mistakes, win and loss.
 - `src/core/climb.js` is climb mode: a ladder from 6×6 easy to 12×12 hard, each stage against a countdown, until a loss or the clock ends the run. `src/core/stats.js` keeps win streaks, compares each win with earlier ones at that size and difficulty for the end card; `src/core/spec.js` resolves the "random" size, difficulty, animal and colour settings once per puzzle.
 - `src/messages.js` holds the messages shown after every game, about a third of them cheeky. Edit them freely.
-- `src/ui/advanced.js` is the icon shown by the menu's "Advanced mode" toggle in place of every animal.
 - The animal portraits come from one sheet, `art/Kawaii Animal Icon Grid.png`. To re-cut them after editing the sheet (4 columns, 3 rows, in menu order):
 
   ```

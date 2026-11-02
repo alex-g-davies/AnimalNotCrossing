@@ -41,6 +41,8 @@ ws.onmessage = (e) => {
     pending.get(msg.id)(msg);
     pending.delete(msg.id);
   }
+  // Page errors would otherwise show up only as a blank screenshot.
+  if (msg.method === "Runtime.exceptionThrown") console.error("page error:", msg.params.exceptionDetails.exception?.description || msg.params.exceptionDetails.text);
 };
 const send = (method, params = {}) => new Promise((resolve) => {
   const n = ++id;
@@ -51,6 +53,7 @@ const evaluate = async (expression) => (await send('Runtime.evaluate', { express
 
 await send('Emulation.setDeviceMetricsOverride', { width: Number(width), height: Number(height), deviceScaleFactor: 2, mobile: true });
 await send('Page.enable');
+await send('Runtime.enable');
 await send("Page.navigate", { url: query.startsWith("http") ? query : `http://localhost:8080/?${query}` });
 for (let i = 0; i < 200; i++) {
   if ((await evaluate('document.querySelectorAll(".cell").length')) > 0 && (await evaluate('document.getElementById("loading").hidden'))) break;

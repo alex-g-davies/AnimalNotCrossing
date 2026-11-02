@@ -106,7 +106,9 @@ export function bindMenu({ settings, sizes, animals, palettes, onChange, onClose
     style: ['set-style', 'value', String],
     palette: ['set-palette', 'value', String],
     lines: ['set-lines', 'value', String],
-    advanced: ['set-advanced', 'checked', Boolean],
+    climbMax: ['set-climb-max', 'value', Number],
+    climbRamp: ['set-climb-ramp', 'value', String],
+    climbClock: ['set-climb-clock', 'value', String],
   };
   for (const [key, [id, prop, cast]] of Object.entries(fields)) {
     const input = $(id);

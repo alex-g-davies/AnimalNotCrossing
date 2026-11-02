@@ -2,7 +2,7 @@
 
 import { RANDOM, SIZES, resolveChoice, resolveSpec, specMatches } from './core/spec.js';
 import { comboKeys, compareTime, recordAbandon, recordResult as recordStats, streaks } from './core/stats.js';
-import { clearStage, newRun, recordRun, stageSpec } from './core/climb.js';
+import { DEFAULT_OPTIONS as CLIMB_DEFAULTS, clearStage, describeOptions, newRun, normalizeOptions, optionsKey, recordRun, stageSpec } from './core/climb.js';
 import { randomSeed } from './core/rng.js';
 import * as game from './core/game.js';
 import { hintFor } from './core/hints.js';
@@ -10,7 +10,6 @@ import { dailySpec, liveStreak, recordDailySolve } from './core/daily.js';
 import { LOSS_MESSAGES, WIN_MESSAGES, fillAnimal, nextMessage } from './messages.js';
 import { KEYS, dumpAll, load, remove, requestPersistence, restoreAll, save } from './store/storage.js';
 import { ANIMALS, DEFAULT_ANIMAL, DEFAULT_FESTIVE_ANIMAL, PAW_SVG, animalFor, animalIds } from './ui/animals.js';
-import { ADVANCED_SVG } from './ui/advanced.js';
 import { PIXEL_PAW } from './ui/animals-pixel.js';
 import { backdropMarkup } from './ui/backdrop.js';
 import { DEFAULT_PALETTE, FESTIVE_PALETTE, PALETTES, applyPalette } from './ui/palettes.js';
@@ -36,7 +35,10 @@ const DEFAULT_SETTINGS = {
   palette: DEFAULT_PALETTE,
   randomPalettes: Object.keys(PALETTES), // the subset "random" picks from
   lines: 'normal',
-  advanced: false,
+  // Advanced: the climb ladder (see core/climb.js).
+  climbMax: CLIMB_DEFAULTS.maxSize,
+  climbRamp: CLIMB_DEFAULTS.ramp,
+  climbClock: CLIMB_DEFAULTS.clock,
 };
 
 const settings = { ...DEFAULT_SETTINGS, ...(load(KEYS.settings, {}) || {}) };
@@ -58,7 +60,8 @@ let current = null; // game state
 let hint = null; // { tier, data }
 let nextPuzzle = null; // a pre-generated puzzle waiting for "New"
 let pending = null; // { n, difficulty, promise } while one is being generated
-let climb = load(KEYS.climb) || null; // active climb run { stage, totalMs }
+let climb = load(KEYS.climb) || null; // active climb run { stage, totalMs, options }
+if (climb && !climb.options) climb.options = CLIMB_DEFAULTS; // runs saved before the ladder was tunable
 let climbNext = null; // { stage, puzzle } pre-generated for the next stage
 let climbPending = null; // stage number being generated
 
@@ -105,9 +108,7 @@ function activePalette() {
 function pixelLook() {
   return settings.style === 'valley';
 }
-// Advanced mode replaces every animal icon, whatever the theme.
 function animalSvg(id = activeAnimal()) {
-  if (settings.advanced) return ADVANCED_SVG;
   const key = id in ANIMALS ? id : DEFAULT_ANIMAL;
   return pixelLook() ? ANIMALS[key].valleyMarkup : ANIMALS[key].markup;
 }
@@ -216,7 +217,7 @@ function startGame(puzzle, saved = null) {
     // Climb stages ignore the relaxed setting and run against the clock.
     const forGame = puzzle.climb ? { ...gameSettings(), relaxed: false } : gameSettings();
     current = { ...game.newGame(puzzle, forGame), look: pickLook() };
-    if (puzzle.climb) current.timeLimitMs = stageSpec(puzzle.climb).timeLimitMs;
+    if (puzzle.climb) current.timeLimitMs = stageSpec(puzzle.climb, climb && climb.options).timeLimitMs;
   }
   hint = null;
   hideHint();
@@ -270,14 +271,24 @@ async function startClimb() {
   if (climb && current && current.puzzle.climb === climb.stage && current.status === 'playing') return;
   timer.pause();
   leaveCurrent();
-  climb = newRun();
+  climb = newRun(climbOptions());
   save(KEYS.climb, climb);
   await startClimbStage();
 }
 
+function climbOptions() {
+  return normalizeOptions({ maxSize: settings.climbMax, ramp: settings.climbRamp, clock: settings.climbClock });
+}
+
+// Climb stats live under stats.climb for the default ladder and
+// stats.climbs[key] for custom ones, so a short ladder cannot set the real best.
+function climbStatsFor(stats, key) {
+  return key === 'default' ? stats.climb : (stats.climbs || {})[key];
+}
+
 async function startClimbStage() {
   if (!climb) return;
-  const spec = stageSpec(climb.stage);
+  const spec = stageSpec(climb.stage, climb.options);
   let puzzle;
   if (climbNext && climbNext.stage === climb.stage) puzzle = climbNext.puzzle;
   else {
@@ -299,7 +310,7 @@ async function startClimbStage() {
 async function prepareClimbNext(stage) {
   if ((climbNext && climbNext.stage === stage) || climbPending === stage) return;
   climbPending = stage;
-  const spec = stageSpec(stage);
+  const spec = stageSpec(stage, climb && climb.options);
   try {
     const puzzle = await generate(spec.n, spec.difficulty);
     if (climbPending === stage) climbNext = { stage, puzzle };
@@ -314,17 +325,22 @@ async function prepareClimbNext(stage) {
 function endClimbRun() {
   if (!climb) return;
   const stats = load(KEYS.stats, {}) || {};
-  save(KEYS.stats, { ...stats, climb: recordRun(stats.climb, climb) });
+  const key = optionsKey(climb.options);
+  if (key === 'default') save(KEYS.stats, { ...stats, climb: recordRun(stats.climb, climb) });
+  else save(KEYS.stats, { ...stats, climbs: { ...(stats.climbs || {}), [key]: recordRun(climbStatsFor(stats, key), climb) } });
   climb = null;
   climbNext = null;
   remove(KEYS.climb);
 }
 
 function climbText() {
-  const c = (load(KEYS.stats, {}) || {}).climb;
+  const options = climb ? climb.options : climbOptions();
+  const key = optionsKey(options);
+  const c = climbStatsFor(load(KEYS.stats, {}) || {}, key);
   const live = climb ? `On stage ${climb.stage} now. ` : '';
-  if (!c) return `${live}Puzzles get bigger and harder, each against the clock. How far can you get?`;
-  return `${live}Best: stage ${c.bestStage} · ${c.runs} run${c.runs === 1 ? '' : 's'}`;
+  const ladder = key === 'default' ? '' : ` Custom ladder: ${describeOptions(options)}.`;
+  if (!c) return `${live}Puzzles get bigger and harder, each against the clock. How far can you get?${ladder}`;
+  return `${live}Best: stage ${c.bestStage} · ${c.runs} run${c.runs === 1 ? '' : 's'}.${ladder}`;
 }
 
 // Today's puzzle: same board for everyone that day, tracked as a streak.
@@ -521,7 +537,7 @@ function finishClimb(won, message, statText) {
   if (won) {
     climb = clearStage(climb, current.elapsedMs);
     save(KEYS.climb, climb);
-    const next = stageSpec(climb.stage);
+    const next = stageSpec(climb.stage, climb.options);
     showEnd({
       status: 'won',
       title: `Stage ${stage} cleared!`,
@@ -536,8 +552,9 @@ function finishClimb(won, message, statText) {
     return;
   }
   const reached = climb.stage;
+  const key = optionsKey(climb.options);
   endClimbRun();
-  const best = ((load(KEYS.stats, {}) || {}).climb || {}).bestStage || reached;
+  const best = (climbStatsFor(load(KEYS.stats, {}) || {}, key) || {}).bestStage || reached;
   showEnd({
     status: 'lost',
     title: current.lostBy === 'time' ? 'Time is up' : 'Out of paws',
@@ -584,8 +601,11 @@ function statsHtml() {
     const [n, difficulty] = key.split('-');
     return `<div class="stat"><b>${n} × ${n} · ${capital(difficulty)}</b><span>${s.solved} solved · ${s.lost} lost · best ${fmt(s.best)} · median ${fmt(median)} · streak ${s.streak || 0}, best ${s.bestStreak || 0}</span></div>`;
   });
-  const c = stats.climb;
-  const climbRow = c ? `<div class="stat"><b>Climb: stage ${c.bestStage}</b><span>best run · ${c.runs} run${c.runs === 1 ? '' : 's'} · ${fmt(c.bestStageMs)} to get there</span></div>` : '';
+  const climbRows = [['default', stats.climb], ...Object.entries(stats.climbs || {})].filter(([, c]) => c).map(([key, c]) => {
+    const ladder = key === 'default' ? '' : ` (${describeOptions(Object.fromEntries(['maxSize', 'ramp', 'clock'].map((k, i) => [k, key.split('-')[i]])))})`;
+    return `<div class="stat"><b>Climb${ladder}: stage ${c.bestStage}</b><span>best run · ${c.runs} run${c.runs === 1 ? '' : 's'} · ${fmt(c.bestStageMs)} to get there</span></div>`;
+  });
+  const climbRow = climbRows.join('');
   return `<div class="stat"><b>Win streak: ${overall.streak}</b><span>Best: ${overall.bestStreak}. A loss, or leaving a puzzle after a move, ends it.</span></div>${climbRow}${rows.join('')}`;
 }
 
@@ -638,7 +658,7 @@ function onSettingChange(key, value) {
     persist();
     applyLook();
   }
-  if (['theme', 'style', 'palette', 'animal', 'festiveAnimal', 'advanced', 'lines'].includes(key)) applyLook();
+  if (['theme', 'style', 'palette', 'animal', 'festiveAnimal', 'lines'].includes(key)) applyLook();
   if (key === 'timer') timer.show(value || Boolean(current && current.puzzle.climb));
   if ((key === 'tapMode' || key === 'autoMark' || key === 'relaxed') && current) {
     current = { ...current, settings: { ...current.settings, ...gameSettings() } };
@@ -706,7 +726,7 @@ requestPersistence();
 const saved = load(KEYS.game);
 if (saved && saved.status === 'playing' && saved.puzzle && saved.board) {
   // JSON turns Infinity into null; restore it for relaxed games.
-  if (saved.puzzle.climb && !climb) climb = { stage: saved.puzzle.climb, totalMs: 0 };
+  if (saved.puzzle.climb && !climb) climb = { stage: saved.puzzle.climb, totalMs: 0, options: climbOptions() };
   startGame(saved.puzzle, { ...saved, mistakeLimit: saved.mistakeLimit === null ? Infinity : saved.mistakeLimit });
 } else if (climb) {
   startClimbStage(); // closed between stages
