@@ -29,6 +29,19 @@ export const ANIMALS = {
   elephant: { name: 'elephant', plural: 'elephants' },
   owl: { name: 'owl', plural: 'owls' },
   seal: { name: 'seal', plural: 'seals' },
+  // Aquatic sheet (art/Aquatic Animal Grid.png and art/Valley Aquatic Grid.png), same order.
+  clownfish: { name: 'clownfish', plural: 'clownfish' },
+  dolphin: { name: 'dolphin', plural: 'dolphins' },
+  whale: { name: 'whale', plural: 'whales' },
+  octopus: { name: 'octopus', plural: 'octopuses' },
+  turtle: { name: 'turtle', plural: 'turtles' },
+  shark: { name: 'shark', plural: 'sharks' },
+  crab: { name: 'crab', plural: 'crabs' },
+  seahorse: { name: 'seahorse', plural: 'seahorses' },
+  jellyfish: { name: 'jellyfish', plural: 'jellyfish' },
+  pufferfish: { name: 'pufferfish', plural: 'pufferfish' },
+  sealpup: { name: 'seal pup', plural: 'seal pups' },
+  narwhal: { name: 'narwhal', plural: 'narwhals' },
 };
 
 for (const [id, animal] of Object.entries(ANIMALS)) {

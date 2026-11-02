@@ -1,0 +1,8 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+body{margin:0;font:12px sans-serif}.row{display:flex;flex-wrap:wrap;padding:6px}.row.dark{background:#1c1a17;color:#eee}.row.light{background:#f6f1e7}
+.row div{width:92px;text-align:center;margin:2px}.row img{width:88px;height:88px;object-fit:contain;display:block}
+</style></head><body><div id="loading" hidden></div><div class="cell" hidden></div><script>
+const p=new URLSearchParams(location.search);const names=p.get('names').split(',');
+for(const dir of p.get('dirs').split(',')) for(const cls of ['light','dark']){const r=document.createElement('div');r.className='row '+cls;
+for(const n of names){const d=document.createElement('div');d.innerHTML=`<img src="${dir}/${n}.png">${n}`;r.appendChild(d);}document.body.appendChild(r);}
+</script></body></html>

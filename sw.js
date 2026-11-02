@@ -2,7 +2,7 @@
 // works with no signal. Change CACHE_VERSION on every deploy (see CLAUDE.md)
 // or players keep the old files.
 
-const CACHE_VERSION = 'anc-v14';
+const CACHE_VERSION = 'anc-v15';
 
 const FILES = [
   './',
@@ -58,6 +58,18 @@ const FILES = [
   './img/animals/elephant.png',
   './img/animals/owl.png',
   './img/animals/seal.png',
+  './img/animals/clownfish.png',
+  './img/animals/dolphin.png',
+  './img/animals/whale.png',
+  './img/animals/octopus.png',
+  './img/animals/turtle.png',
+  './img/animals/shark.png',
+  './img/animals/crab.png',
+  './img/animals/seahorse.png',
+  './img/animals/jellyfish.png',
+  './img/animals/pufferfish.png',
+  './img/animals/sealpup.png',
+  './img/animals/narwhal.png',
   './img/valley/cat.png',
   './img/valley/dog.png',
   './img/valley/bunny.png',
@@ -82,6 +94,18 @@ const FILES = [
   './img/valley/elephant.png',
   './img/valley/owl.png',
   './img/valley/seal.png',
+  './img/valley/clownfish.png',
+  './img/valley/dolphin.png',
+  './img/valley/whale.png',
+  './img/valley/octopus.png',
+  './img/valley/turtle.png',
+  './img/valley/shark.png',
+  './img/valley/crab.png',
+  './img/valley/seahorse.png',
+  './img/valley/jellyfish.png',
+  './img/valley/pufferfish.png',
+  './img/valley/sealpup.png',
+  './img/valley/narwhal.png',
   './img/valley/farm.png',
   './img/valley/sprig.png',
   './icons/icon-180.png',
