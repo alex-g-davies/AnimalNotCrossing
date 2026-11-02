@@ -472,7 +472,7 @@ button.link {
 .sheet h2 { margin: 0 0 4px; font-size: 1.25rem; }
 .sheet h3 { margin: 18px 0 6px 4px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 700; }
 .sheet section { border: 0; padding: 0; }
-.sheet section > label, .sheet section > .row.gap, .sheet section > #stats, .sheet section > .note {
+.sheet section > label, .sheet section > .row.gap, .sheet section > .stats, .sheet section > .note {
   background: var(--bg);
   margin: 0;
   padding: 10px 12px;
@@ -503,10 +503,14 @@ button.link {
 .note { color: var(--muted); font-size: 0.85rem; margin: 6px 0 0; }
 .sheet section > .checks { background: var(--bg); padding: 2px 12px 4px 24px; border-bottom: 1px solid var(--line); }
 .checks label.row { min-height: 36px; font-size: 0.9rem; }
-#stats { font-size: 0.9rem; color: var(--muted); line-height: 1.45; }
-#stats .stat { display: flex; flex-direction: column; padding: 4px 0; }
-#stats .stat + .stat { border-top: 1px solid var(--line); }
-#stats .stat b { color: var(--fg); font-weight: 600; }
+/* Stats page rows: text on the left, a sparkline of recent win times on the right. */
+.stats { font-size: 0.9rem; color: var(--muted); line-height: 1.45; }
+.stats .stat { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+.stats .stat + .stat { border-top: 1px solid var(--line); }
+.stats .stat-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.stats .stat b { color: var(--fg); font-weight: 600; }
+.stats .trend { font-size: 0.82rem; margin-top: 2px; }
+.stats .spark { width: 96px; height: 26px; flex: none; color: var(--muted); opacity: 0.9; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -587,7 +591,7 @@ html[data-style="valley"] #bar, html[data-style="valley"] .card, html[data-style
   box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.18);
 }
 html[data-style="valley"] .bar-btn { border-radius: 2px; }
-html[data-style="valley"] .sheet section > label, html[data-style="valley"] .sheet section > .row.gap, html[data-style="valley"] .sheet section > #stats, html[data-style="valley"] .sheet section > .note { border-radius: 0 !important; }
+html[data-style="valley"] .sheet section > label, html[data-style="valley"] .sheet section > .row.gap, html[data-style="valley"] .sheet section > .stats, html[data-style="valley"] .sheet section > .note { border-radius: 0 !important; }
 html[data-style="valley"] button.primary { border-radius: 4px; box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.25); }
 html[data-style="valley"] #overlay-art svg, html[data-style="valley"] #overlay-art img { animation: hop 0.9s steps(2, end) infinite; }
 @keyframes hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }

@@ -1,7 +1,7 @@
 // Wiring: owns the current game, settings, the worker and persistence.
 
 import { RANDOM, SIZES, resolveChoice, resolveSpec, specMatches } from './core/spec.js';
-import { comboKeys, compareTime, recordAbandon, recordResult as recordStats, streaks } from './core/stats.js';
+import { compareTime, recordAbandon, recordResult as recordStats, streaks } from './core/stats.js';
 import { DEFAULT_OPTIONS as CLIMB_DEFAULTS, clearStage, describeOptions, newRun, normalizeOptions, optionsKey, recordRun, stageSpec } from './core/climb.js';
 import { randomSeed } from './core/rng.js';
 import * as game from './core/game.js';
@@ -16,8 +16,9 @@ import { DEFAULT_PALETTE, FESTIVE_PALETTE, PALETTES, applyPalette } from './ui/p
 import { createBoard } from './ui/board.js';
 import { confetti, formatTime, hideEnd, hideHint, showEnd, showHint, showLoading } from './ui/screens.js';
 import {
-  bindBar, bindMenu, closeMenu, createTimer, openMenu, renderMistakes, renderStats, setAnimalOptions, setSubtitle, setUndoEnabled, syncMenu,
+  bindBar, bindMenu, bindStats, closeMenu, createTimer, openMenu, openStats, renderMistakes, renderStats, setAnimalOptions, setSubtitle, setUndoEnabled, syncMenu,
 } from './ui/controls.js';
+import { statsPageHtml } from './ui/statspage.js';
 
 const LINE_WEIGHTS = ['fine', 'normal', 'bold', 'heavy'];
 
@@ -588,27 +589,6 @@ function recordResult(won) {
   return stats;
 }
 
-function statsHtml() {
-  const stats = load(KEYS.stats, {}) || {};
-  const keys = comboKeys(stats);
-  if (!keys.length) return 'No puzzles finished yet.';
-  const overall = streaks(stats);
-  const fmt = (v) => (v === null || v === undefined ? '–' : formatTime(v));
-  const rows = keys.map((key) => {
-    const s = stats[key];
-    const sorted = (s.times || []).slice().sort((a, b) => a - b);
-    const median = sorted.length ? sorted[Math.floor(sorted.length / 2)] : null;
-    const [n, difficulty] = key.split('-');
-    return `<div class="stat"><b>${n} × ${n} · ${capital(difficulty)}</b><span>${s.solved} solved · ${s.lost} lost · best ${fmt(s.best)} · median ${fmt(median)} · streak ${s.streak || 0}, best ${s.bestStreak || 0}</span></div>`;
-  });
-  const climbRows = [['default', stats.climb], ...Object.entries(stats.climbs || {})].filter(([, c]) => c).map(([key, c]) => {
-    const ladder = key === 'default' ? '' : ` (${describeOptions(Object.fromEntries(['maxSize', 'ramp', 'clock'].map((k, i) => [k, key.split('-')[i]])))})`;
-    return `<div class="stat"><b>Climb${ladder}: stage ${c.bestStage}</b><span>best run · ${c.runs} run${c.runs === 1 ? '' : 's'} · ${fmt(c.bestStageMs)} to get there</span></div>`;
-  });
-  const climbRow = climbRows.join('');
-  return `<div class="stat"><b>Win streak: ${overall.streak}</b><span>Best: ${overall.bestStreak}. A loss, or leaving a puzzle after a move, ends it.</span></div>${climbRow}${rows.join('')}`;
-}
-
 function exportData() {
   const payload = { app: 'animal-not-crossing', version: 1, exportedAt: new Date().toISOString(), data: dumpAll() };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -688,7 +668,6 @@ bindBar({
   onHint,
   onNew: startNew,
   onMenu: () => {
-    renderStats(statsHtml());
     document.getElementById('daily-streak').textContent = dailyStreakText();
     document.getElementById('climb-note').textContent = climbText();
     document.getElementById('btn-climb').textContent = climb ? 'Continue the climb' : 'Start a climb';
@@ -715,6 +694,14 @@ document.addEventListener('visibilitychange', () => {
   } else if (current && current.status === 'playing') {
     timer.resume();
   }
+});
+
+bindStats({
+  onOpen: () => {
+    renderStats(statsPageHtml(load(KEYS.stats, {}) || {}, { today: dailySpec().key, formatTime }));
+    closeMenu();
+    openStats();
+  },
 });
 
 document.getElementById('btn-daily').addEventListener('click', startDaily);

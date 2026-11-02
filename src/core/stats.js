@@ -7,7 +7,7 @@
 // nothing). X marks and hints do not matter.
 
 export const OVERALL = 'overall';
-export const RESERVED = new Set([OVERALL, 'daily', 'climb']);
+export const RESERVED = new Set([OVERALL, 'daily', 'climb', 'climbs']);
 
 export function comboKey(puzzle) {
   return `${puzzle.n}-${puzzle.difficulty}`;
@@ -17,8 +17,10 @@ function entryFor(stats, key) {
   return { solved: 0, lost: 0, times: [], best: null, streak: 0, bestStreak: 0, ...(stats[key] || {}) };
 }
 
+// `games` and `playMs` count every finished game, win or loss, since they
+// were added (Nov 2026); older games have no recorded time.
 function overallFor(stats) {
-  return { streak: 0, bestStreak: 0, ...(stats[OVERALL] || {}) };
+  return { streak: 0, bestStreak: 0, games: 0, playMs: 0, ...(stats[OVERALL] || {}) };
 }
 
 function bump(entry, won) {
@@ -30,6 +32,11 @@ function bump(entry, won) {
 export function recordResult(stats, puzzle, won, elapsedMs) {
   const key = comboKey(puzzle);
   const entry = bump(entryFor(stats, key), won);
+  const ms = Number.isFinite(elapsedMs) ? elapsedMs : 0;
+  entry.playMs = (entry.playMs || 0) + ms;
+  const overall = bump(overallFor(stats), won);
+  overall.games += 1;
+  overall.playMs += ms;
   if (won) {
     entry.solved++;
     entry.times = [...entry.times, elapsedMs].slice(-100);
@@ -37,7 +44,7 @@ export function recordResult(stats, puzzle, won, elapsedMs) {
   } else {
     entry.lost++;
   }
-  return { ...stats, [key]: entry, [OVERALL]: bump(overallFor(stats), won) };
+  return { ...stats, [key]: entry, [OVERALL]: overall };
 }
 
 // Leaving a puzzle unfinished after making a move ends both streaks.
@@ -47,7 +54,34 @@ export function recordAbandon(stats, puzzle) {
 }
 
 export function streaks(stats) {
-  return overallFor(stats);
+  const { streak, bestStreak } = overallFor(stats);
+  return { streak, bestStreak };
+}
+
+// Totals across every size and difficulty. `timedGames` is how many of the
+// games have a recorded time (all of them, once the counters exist).
+export function summary(stats) {
+  const o = overallFor(stats);
+  let wins = 0, losses = 0;
+  for (const key of comboKeys(stats)) {
+    wins += stats[key].solved || 0;
+    losses += stats[key].lost || 0;
+  }
+  const games = wins + losses;
+  return { games, wins, losses, winRate: games ? wins / games : null, playMs: o.playMs, timedGames: Math.min(o.games, games) };
+}
+
+// Are the recent wins quicker than the earlier ones? Compares the medians of
+// the two halves of the recorded times; null until there are `min` of them.
+// `pct` is positive when the recent half is quicker.
+export function trend(times, min = 6) {
+  const t = (times || []).filter(Number.isFinite);
+  if (t.length < min) return null;
+  const half = Math.floor(t.length / 2);
+  const median = (xs) => { const s = xs.slice().sort((a, b) => a - b); return s[s.length >> 1]; };
+  const earlier = median(t.slice(0, half));
+  const recent = median(t.slice(-half));
+  return { earlier, recent, pct: earlier ? Math.round(((earlier - recent) / earlier) * 100) : 0 };
 }
 
 export function comboKeys(stats) {

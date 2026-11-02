@@ -80,6 +80,7 @@
         </div>
         <p id="daily-streak" class="note"></p>
         <p id="climb-note" class="note"></p>
+        <div class="row gap"><button id="btn-stats" type="button">Stats</button></div>
       </section>
       <section>
         <h3>Puzzle</h3>
@@ -126,10 +127,7 @@
         </select></label>
         <p class="note">Applies to the next climb. A custom ladder keeps its own best, apart from the standard one.</p>
       </section>
-      <section id="stats-section">
-        <h3>Stats</h3>
-        <div id="stats"></div>
-      </section>
+
       <section>
         <h3>Backup</h3>
         <div class="row gap">
@@ -139,6 +137,15 @@
         </div>
       </section>
       <button id="btn-menu-close" class="primary" type="button">Done</button>
+    </div>
+  </div>
+
+  <div id="stats-sheet" class="sheet-backdrop" hidden>
+    <div class="card sheet" role="dialog" aria-modal="true" aria-label="Stats">
+      <div class="sheet-handle"></div>
+      <h2>Stats</h2>
+      <div id="stats-body"></div>
+      <button id="btn-stats-close" class="primary" type="button">Done</button>
     </div>
   </div>
 

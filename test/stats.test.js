@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { OVERALL, comboKeys, compareTime, recordAbandon, recordResult, streaks } from '../src/core/stats.js';
+import { OVERALL, comboKeys, compareTime, recordAbandon, recordResult, streaks, summary, trend } from '../src/core/stats.js';
 
 const p8 = { n: 8, difficulty: 'medium' };
 const p6 = { n: 6, difficulty: 'easy' };
@@ -69,3 +69,26 @@ test('compareTime measures against earlier wins at the same combination', () => 
   assert.equal(compareTime(s, p6, 1).count, 0, 'other combinations do not mix in');
 });
 
+
+test('every finished game adds to the totals and play time, win or loss', () => {
+  let s = recordResult({}, p8, true, 60000);
+  s = recordResult(s, p8, false, 30000);
+  s = recordResult(s, p6, true, 15000);
+  assert.deepEqual(streaks(s), { streak: 1, bestStreak: 1 });
+  assert.deepEqual(summary(s), { games: 3, wins: 2, losses: 1, winRate: 2 / 3, playMs: 105000, timedGames: 3 });
+  assert.equal(s['8-medium'].playMs, 90000);
+  // Stats from before the counters existed: games are known, their time is not.
+  const old = { '8-medium': { solved: 4, lost: 1, times: [1, 2, 3, 4], best: 1, streak: 0, bestStreak: 2 }, overall: { streak: 0, bestStreak: 2 } };
+  assert.deepEqual(summary(old), { games: 5, wins: 4, losses: 1, winRate: 0.8, playMs: 0, timedGames: 0 });
+  const after = recordResult(old, p8, true, 20000);
+  assert.equal(summary(after).timedGames, 1);
+  assert.equal(summary(after).games, 6);
+});
+
+test('the trend compares the recent half of the wins with the earlier half', () => {
+  assert.equal(trend([50, 40, 30]), null, 'too few');
+  assert.deepEqual(trend([100, 100, 100, 50, 50, 50]), { earlier: 100, recent: 50, pct: 50 });
+  assert.equal(trend([50, 50, 50, 100, 100, 100]).pct, -100);
+  assert.equal(trend([1, 2, 3, 4, 5, 6, 7]).earlier, 2);
+  assert.equal(trend([0, 0, 0, 0, 0, 0]).pct, 0);
+});

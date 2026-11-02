@@ -168,8 +168,26 @@ export function closeMenu() {
   $('menu').hidden = true;
 }
 
+// The Stats page: its own sheet, opened from the menu.
+export function bindStats({ onOpen }) {
+  $('btn-stats').addEventListener('click', onOpen);
+  $('btn-stats-close').addEventListener('click', closeStats);
+  $('stats-sheet').addEventListener('click', (event) => {
+    if (event.target === $('stats-sheet')) closeStats();
+  });
+}
+
+export function openStats() {
+  $('stats-sheet').hidden = false;
+  $('stats-body').scrollTop = 0;
+}
+
+export function closeStats() {
+  $('stats-sheet').hidden = true;
+}
+
 export function renderStats(html) {
-  $('stats').innerHTML = html;
+  $('stats-body').innerHTML = html;
 }
 
 function fill(select, options) {
