@@ -138,6 +138,17 @@ export function bindMenu({ settings, sizes, animals, palettes, onChange, onClose
   });
 }
 
+// The Animal select lists one set at a time (everyday or festive).
+let animalOptionsKey = '';
+export function setAnimalOptions(animals, value) {
+  const key = animals.map(([id]) => id).join(',');
+  if (key !== animalOptionsKey) {
+    animalOptionsKey = key;
+    fill($('set-animal'), [...animals.map(([id, a]) => [id, capital(a.name)]), ['random', 'Random each puzzle']]);
+  }
+  $('set-animal').value = value;
+}
+
 export function syncMenu(settings) {
   $('set-size').value = String(settings.n);
   $('set-difficulty').value = settings.difficulty;

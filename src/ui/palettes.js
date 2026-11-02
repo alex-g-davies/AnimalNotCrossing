@@ -7,7 +7,10 @@
 //
 // "Farm" is the palette drawn for the Valley style (the Stardew-inspired
 // pixel look, see style.css html[data-style="valley"]); like the others it
-// can be used under either style.
+// can be used under either style. "Christmas" also brings snow and the
+// festive animal set (see animals.js and backdrop.js).
+
+export const FESTIVE_PALETTE = 'christmas';
 
 export const PALETTES = {
   meadow: {
@@ -29,6 +32,11 @@ export const PALETTES = {
     name: 'Dusk',
     light: ['#e6a3ba', '#a1b6ec', '#e6d1a3', '#b4e3d5', '#e7cbf2', '#edb09e', '#eded9c', '#c6dff5', '#eddad3', '#b4f0b8', '#eaa3e6', '#b09fee'],
     dark: ['#8d345d', '#33518f', '#7c6d44', '#348972', '#4d275a', '#8c3733', '#8d8d32', '#2d4257', '#56392d', '#358a41', '#89338e', '#3c328d'],
+  },
+  christmas: {
+    name: 'Christmas',
+    light: ['#d69196', '#81e3a6', '#f9ebbc', '#b6d7f6', '#f3c3d6', '#88e8d2', '#ede97f', '#cda4e0', '#f09b73', '#c5edc1', '#eb76b9', '#9db3ee'],
+    dark: ['#85222a', '#145d29', '#64531e', '#2a6a83', '#592436', '#205245', '#7c791b', '#632173', '#6c3b27', '#278c22', '#882758', '#2d3e7b'],
   },
   farm: {
     name: 'Farm',

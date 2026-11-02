@@ -42,6 +42,21 @@ export const ANIMALS = {
   pufferfish: { name: 'pufferfish', plural: 'pufferfish' },
   sealpup: { name: 'seal pup', plural: 'seal pups' },
   narwhal: { name: 'narwhal', plural: 'narwhals' },
+  // Christmas sheets (art/Christmas Animal Grid.png and art/Valley Christmas
+  // Grid.png), same order. Shown only with the Christmas colours; `base` names
+  // the everyday animal a dressed-up one stands in for.
+  reindeer: { name: 'reindeer', plural: 'reindeer', festive: true },
+  polarbear: { name: 'polar bear', plural: 'polar bears', festive: true },
+  'xmas-penguin': { name: 'penguin', plural: 'penguins', festive: true, base: 'penguin' },
+  'xmas-fox': { name: 'fox', plural: 'foxes', festive: true, base: 'fox' },
+  'xmas-bunny': { name: 'bunny', plural: 'bunnies', festive: true, base: 'bunny' },
+  'xmas-mouse': { name: 'mouse', plural: 'mice', festive: true, base: 'mouse' },
+  squirrel: { name: 'squirrel', plural: 'squirrels', festive: true },
+  robin: { name: 'robin', plural: 'robins', festive: true },
+  'xmas-cat': { name: 'cat', plural: 'cats', festive: true, base: 'cat' },
+  'xmas-dog': { name: 'dog', plural: 'dogs', festive: true, base: 'dog' },
+  'xmas-sheep': { name: 'sheep', plural: 'sheep', festive: true, base: 'sheep' },
+  'xmas-hedgehog': { name: 'hedgehog', plural: 'hedgehogs', festive: true, base: 'hedgehog' },
 };
 
 for (const [id, animal] of Object.entries(ANIMALS)) {
@@ -50,6 +65,23 @@ for (const [id, animal] of Object.entries(ANIMALS)) {
 }
 
 export const DEFAULT_ANIMAL = 'cat';
+export const DEFAULT_FESTIVE_ANIMAL = 'reindeer';
+
+// The ids on offer: the everyday set, or the festive set with the Christmas colours.
+export function animalIds(festive) {
+  return Object.keys(ANIMALS).filter((id) => Boolean(ANIMALS[id].festive) === festive);
+}
+
+// The id to show for a chosen animal when the festive set is (or is not) in
+// use: a dressed-up version of the same animal where there is one, else the
+// set's default. Ids already in the right set come back unchanged.
+export function animalFor(id, festive) {
+  const animal = ANIMALS[id];
+  if (!animal) return festive ? DEFAULT_FESTIVE_ANIMAL : DEFAULT_ANIMAL;
+  if (Boolean(animal.festive) === festive) return id;
+  if (festive) return Object.keys(ANIMALS).find((k) => ANIMALS[k].base === id) || DEFAULT_FESTIVE_ANIMAL;
+  return animal.base || DEFAULT_ANIMAL;
+}
 
 export function animalMarkup(id) {
   return (ANIMALS[id] || ANIMALS[DEFAULT_ANIMAL]).markup;

@@ -118,6 +118,11 @@ html[data-theme="dark"] #backdrop { opacity: 0.6; }
 #backdrop .ground { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--safe-bottom) + 66px); background: #b7a940; }
 #backdrop .sprig { position: absolute; top: calc(var(--safe-top) + 44px); left: 2px; width: 54px; }
 #backdrop .sprig.tr { left: auto; right: 2px; transform: scaleX(-1); }
+#backdrop .ground.snowy { background: #e6ebf7; }
+/* Snow (Christmas colours): flakes fall from above the viewport, swaying by --sway. */
+#backdrop .snow { position: absolute; inset: 0; overflow: hidden; }
+#backdrop .snow i { position: absolute; top: -8px; border-radius: 50%; background: #fff; box-shadow: 0 0 2px rgba(255, 255, 255, 0.8); animation: snowfall 12s linear infinite; }
+@keyframes snowfall { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(var(--sway, 0px), 105vh, 0); } }
 html[data-style="valley"] #backdrop { opacity: 1; }
 html[data-style="valley"][data-theme="dark"] #backdrop .deco { filter: brightness(0.55) saturate(0.7); }
 @media (prefers-color-scheme: dark) { html[data-style="valley"][data-theme="auto"] #backdrop .deco { filter: brightness(0.55) saturate(0.7); } }

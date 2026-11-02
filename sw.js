@@ -2,7 +2,7 @@
 // works with no signal. Change CACHE_VERSION on every deploy (see CLAUDE.md)
 // or players keep the old files.
 
-const CACHE_VERSION = 'anc-v15';
+const CACHE_VERSION = 'anc-v16';
 
 const FILES = [
   './',
@@ -70,6 +70,18 @@ const FILES = [
   './img/animals/pufferfish.png',
   './img/animals/sealpup.png',
   './img/animals/narwhal.png',
+  './img/animals/reindeer.png',
+  './img/animals/polarbear.png',
+  './img/animals/xmas-penguin.png',
+  './img/animals/xmas-fox.png',
+  './img/animals/xmas-bunny.png',
+  './img/animals/xmas-mouse.png',
+  './img/animals/squirrel.png',
+  './img/animals/robin.png',
+  './img/animals/xmas-cat.png',
+  './img/animals/xmas-dog.png',
+  './img/animals/xmas-sheep.png',
+  './img/animals/xmas-hedgehog.png',
   './img/valley/cat.png',
   './img/valley/dog.png',
   './img/valley/bunny.png',
@@ -106,7 +118,21 @@ const FILES = [
   './img/valley/pufferfish.png',
   './img/valley/sealpup.png',
   './img/valley/narwhal.png',
+  './img/valley/reindeer.png',
+  './img/valley/polarbear.png',
+  './img/valley/xmas-penguin.png',
+  './img/valley/xmas-fox.png',
+  './img/valley/xmas-bunny.png',
+  './img/valley/xmas-mouse.png',
+  './img/valley/squirrel.png',
+  './img/valley/robin.png',
+  './img/valley/xmas-cat.png',
+  './img/valley/xmas-dog.png',
+  './img/valley/xmas-sheep.png',
+  './img/valley/xmas-hedgehog.png',
   './img/valley/farm.png',
+  './img/valley/farm-snow.png',
+  './img/valley/holly.png',
   './img/valley/sprig.png',
   './icons/icon-180.png',
   './icons/icon-192.png',

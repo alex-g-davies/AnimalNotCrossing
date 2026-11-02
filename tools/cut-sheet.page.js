@@ -53,9 +53,19 @@ async function cut(b64, cols, rows, size, names) {
     }
     return out;
   };
-  const rowBands = bands(H, W, (y) => { let n = 0; for (let x = 0; x < W; x += 2) if (dist(x, y, page) > 25) n += 2; return n; });
-  const colBands = bands(W, H, (x) => { let n = 0; for (let y = 0; y < H; y += 2) if (dist(x, y, page) > 25) n += 2; return n; });
-  if (rowBands.length !== rows || colBands.length !== cols) throw new Error(`found ${colBands.length}x${rowBands.length} tiles, expected ${cols}x${rows}`);
+  // The gaps between tiles can be a little lighter than the sheet's edge
+  // (a vignette), so the "not page" threshold is raised until the expected
+  // grid appears.
+  let rowBands, colBands, gridTol;
+  for (gridTol of [25, 30, 35, 40, 45, 50]) {
+    const T = gridTol;
+    rowBands = bands(H, W, (y) => { let n = 0; for (let x = 0; x < W; x += 2) if (dist(x, y, page) > T) n += 2; return n; });
+    colBands = bands(W, H, (x) => { let n = 0; for (let y = 0; y < H; y += 2) if (dist(x, y, page) > T) n += 2; return n; });
+    if (rowBands.length === rows && colBands.length === cols) break;
+  }
+  if (rowBands.length !== rows || colBands.length !== cols) {
+    throw new Error(`found ${colBands.length}x${rowBands.length} tiles, expected ${cols}x${rows} (page rgb(${page}) noise ${pageNoise.toFixed(0)}; rows ${JSON.stringify(rowBands)}, cols ${JSON.stringify(colBands)})`);
+  }
   const out = [];
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
     const name = names[r * cols + c];

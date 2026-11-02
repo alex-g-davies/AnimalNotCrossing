@@ -108,16 +108,42 @@ function farm() {
   return svg(`${sun}${hills}${wheat}${rails}${posts}`);
 }
 
-function valley() {
-  return `<div class="deco ground"></div><img class="deco farm" src="img/valley/farm.png" alt="" draggable="false">
-    <img class="deco sprig tl" src="img/valley/sprig.png" alt="" draggable="false">
-    <img class="deco sprig tr" src="img/valley/sprig.png" alt="" draggable="false">`;
+function valley(snowy = false) {
+  const farm = snowy ? 'farm-snow' : 'farm', sprig = snowy ? 'holly' : 'sprig';
+  return `<div class="deco ground${snowy ? ' snowy' : ''}"></div><img class="deco farm" src="img/valley/${farm}.png" alt="" draggable="false">
+    <img class="deco sprig tl" src="img/valley/${sprig}.png" alt="" draggable="false">
+    <img class="deco sprig tr" src="img/valley/${sprig}.png" alt="" draggable="false">`;
 }
 
-const SCENES = { meadow, sorbet, ocean, dusk, farm, valley };
+// Falling snow: a few dozen flakes on CSS animations (style.css .snow), each
+// with its own size, speed, delay and sway. Reduced motion stops them.
+function snow() {
+  const rnd = seeded(25);
+  let flakes = '';
+  for (let i = 0; i < 40; i++) {
+    const size = (2 + rnd() * 4).toFixed(1);
+    flakes += `<i style="left:${(rnd() * 100).toFixed(1)}%;width:${size}px;height:${size}px;opacity:${(0.5 + rnd() * 0.5).toFixed(2)};animation-duration:${(9 + rnd() * 10).toFixed(1)}s;animation-delay:-${(rnd() * 19).toFixed(1)}s;--sway:${((rnd() - 0.5) * 80).toFixed(0)}px"></i>`;
+  }
+  return `<div class="snow" aria-hidden="true">${flakes}</div>`;
+}
 
-// `id` is a palette id, or 'valley' for the Valley style's own scene.
-export function backdropMarkup(id) {
-  const scene = SCENES[id];
-  return scene ? scene() : '';
+// Christmas in the normal style: firs and snow mounds below, baubles above.
+function christmas() {
+  const fir = (x, y, s, color) => `<g transform="translate(${x} ${y}) scale(${s})" fill="${color}" opacity="0.5">
+    <path d="M0 -70 L28 -30 L14 -30 L36 6 L18 6 L44 44 L-44 44 L-18 6 L-36 6 L-14 -30 L-28 -30 Z"/><rect x="-6" y="44" width="12" height="16" fill="#7a4a24"/></g>`;
+  const mounds = `<ellipse cx="60" cy="812" rx="140" ry="32" fill="#ffffff" opacity="0.55"/><ellipse cx="260" cy="818" rx="150" ry="36" fill="#ffffff" opacity="0.5"/><ellipse cx="400" cy="810" rx="120" ry="30" fill="#ffffff" opacity="0.55"/>`;
+  const bauble = (x, len, color) => `<line x1="${x}" y1="0" x2="${x}" y2="${len}" stroke="#c9a24a" stroke-width="1.5" opacity="0.6"/><circle cx="${x}" cy="${len + 9}" r="9" fill="${color}" opacity="0.7"/><rect x="${x - 3}" y="${len - 2}" width="6" height="4" fill="#c9a24a" opacity="0.8"/>`;
+  const baubles = `${bauble(24, 70, '#d64545')}${bauble(52, 92, '#e4b84a')}${bauble(348, 84, '#4a9c5c')}${bauble(376, 62, '#d64545')}`; // strings long enough to clear the header
+  return svg(`${mounds}${fir(40, 740, 0.8, '#2f6b3f')}${fir(90, 760, 0.55, '#3f8a52')}${fir(360, 745, 0.8, '#2f6b3f')}${fir(310, 765, 0.55, '#3f8a52')}${baubles}`);
+}
+
+const SCENES = { meadow, sorbet, ocean, dusk, farm, christmas };
+
+// The scene for a palette in the normal style, or the pixel farm in the
+// Valley style. Christmas adds snow to both (and swaps in the snowy farm).
+export function backdropMarkup(palette, style = 'normal') {
+  const snowy = palette === 'christmas';
+  if (style === 'valley') return valley(snowy) + (snowy ? snow() : '');
+  const scene = SCENES[palette];
+  return (scene ? scene() : '') + (snowy ? snow() : '');
 }

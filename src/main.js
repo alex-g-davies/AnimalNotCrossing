@@ -9,15 +9,15 @@ import { hintFor } from './core/hints.js';
 import { dailySpec, liveStreak, recordDailySolve } from './core/daily.js';
 import { LOSS_MESSAGES, WIN_MESSAGES, fillAnimal, nextMessage } from './messages.js';
 import { KEYS, dumpAll, load, remove, requestPersistence, restoreAll, save } from './store/storage.js';
-import { ANIMALS, DEFAULT_ANIMAL, PAW_SVG } from './ui/animals.js';
+import { ANIMALS, DEFAULT_ANIMAL, DEFAULT_FESTIVE_ANIMAL, PAW_SVG, animalFor, animalIds } from './ui/animals.js';
 import { ADVANCED_SVG } from './ui/advanced.js';
 import { PIXEL_PAW } from './ui/animals-pixel.js';
 import { backdropMarkup } from './ui/backdrop.js';
-import { DEFAULT_PALETTE, PALETTES, applyPalette } from './ui/palettes.js';
+import { DEFAULT_PALETTE, FESTIVE_PALETTE, PALETTES, applyPalette } from './ui/palettes.js';
 import { createBoard } from './ui/board.js';
 import { confetti, formatTime, hideEnd, hideHint, showEnd, showHint, showLoading } from './ui/screens.js';
 import {
-  bindBar, bindMenu, closeMenu, createTimer, openMenu, renderMistakes, renderStats, setSubtitle, setUndoEnabled, syncMenu,
+  bindBar, bindMenu, closeMenu, createTimer, openMenu, renderMistakes, renderStats, setAnimalOptions, setSubtitle, setUndoEnabled, syncMenu,
 } from './ui/controls.js';
 
 const LINE_WEIGHTS = ['fine', 'normal', 'bold', 'heavy'];
@@ -30,6 +30,7 @@ const DEFAULT_SETTINGS = {
   relaxed: false,
   timer: false,
   animal: DEFAULT_ANIMAL,
+  festiveAnimal: DEFAULT_FESTIVE_ANIMAL, // the pick while the Christmas colours are on
   theme: 'auto',
   style: 'normal', // 'normal' or 'valley' (the pixel look)
   palette: DEFAULT_PALETTE,
@@ -45,6 +46,7 @@ if (settings.tapMode === 'mark-first' || settings.tapMode === 'animal-first') se
 // without being saved; handy for sharing a look and for screenshots.
 const params = new URLSearchParams(location.search);
 for (const key of ['style', 'palette', 'animal', 'theme', 'lines']) if (params.has(key)) settings[key] = params.get(key);
+if (params.has('animal') && ANIMALS[params.get('animal')] && ANIMALS[params.get('animal')].festive) settings.festiveAnimal = params.get('animal');
 // Until Nov 2026 "Valley" was a palette that also switched the whole look. It
 // is now the Valley style plus the "Farm" colours; old saves are mapped.
 if (settings.palette === 'valley') {
@@ -72,14 +74,22 @@ function isDark() {
 // Animal and palette may be set to 'random': the concrete pick is made when a
 // game starts and stored on it as `look`, so it stays put for that puzzle.
 function pickLook() {
-  return {
-    animal: resolveChoice(settings.animal, Object.keys(ANIMALS)),
-    palette: resolveChoice(settings.palette, enabledPalettes()),
-  };
+  const palette = resolveChoice(settings.palette, enabledPalettes());
+  const fest = palette === FESTIVE_PALETTE;
+  return { animal: resolveChoice(animalChoice(fest), animalIds(fest)), palette };
+}
+// The Christmas colours bring their own animal set, with its own pick.
+function festive() {
+  return activePalette() === FESTIVE_PALETTE;
+}
+function animalChoice(fest = festive()) {
+  return fest ? settings.festiveAnimal : settings.animal;
 }
 function activeAnimal() {
-  const id = settings.animal === RANDOM ? current && current.look && current.look.animal : settings.animal;
-  return id in ANIMALS ? id : DEFAULT_ANIMAL;
+  const fest = festive();
+  const choice = animalChoice(fest);
+  const id = choice === RANDOM ? current && current.look && current.look.animal : choice;
+  return animalFor(id, fest);
 }
 // With colours on "random", only the ticked palettes are picked (all, if none are).
 function enabledPalettes() {
@@ -111,15 +121,17 @@ function applyLook() {
   document.documentElement.dataset.palette = palette;
   document.documentElement.dataset.lines = LINE_WEIGHTS.includes(settings.lines) ? settings.lines : 'normal';
   applyPalette(palette, isDark());
-  applyBackdrop(pixelLook() ? 'valley' : palette);
+  applyBackdrop(palette, pixelLook() ? 'valley' : 'normal');
+  setAnimalOptions(animalIds(festive()).map((id) => [id, ANIMALS[id]]), animalChoice());
   board.setAnimal(animalSvg());
   if (current) renderMistakes(game.mistakesLeft(current), current.mistakeLimit, pawSvg());
 }
 let backdropFor = null;
-function applyBackdrop(palette) {
-  if (backdropFor === palette) return;
-  backdropFor = palette;
-  document.getElementById('backdrop').innerHTML = backdropMarkup(palette);
+function applyBackdrop(palette, style) {
+  const key = `${style}:${palette}`;
+  if (backdropFor === key) return;
+  backdropFor = key;
+  document.getElementById('backdrop').innerHTML = backdropMarkup(palette, style);
 }
 darkQuery.addEventListener('change', applyLook);
 
@@ -614,9 +626,10 @@ async function importData(file) {
 // --- Menu ------------------------------------------------------------------
 
 function onSettingChange(key, value) {
+  if (key === 'animal' && festive()) key = 'festiveAnimal'; // the select shows the festive set
   settings[key] = value;
   save(KEYS.settings, settings);
-  if (key === 'palette' || key === 'animal') {
+  if (key === 'palette' || key === 'animal' || key === 'festiveAnimal') {
     if (current) current = { ...current, look: pickLook() };
     persist();
   }
@@ -625,7 +638,7 @@ function onSettingChange(key, value) {
     persist();
     applyLook();
   }
-  if (['theme', 'style', 'palette', 'animal', 'advanced', 'lines'].includes(key)) applyLook();
+  if (['theme', 'style', 'palette', 'animal', 'festiveAnimal', 'advanced', 'lines'].includes(key)) applyLook();
   if (key === 'timer') timer.show(value || Boolean(current && current.puzzle.climb));
   if ((key === 'tapMode' || key === 'autoMark' || key === 'relaxed') && current) {
     current = { ...current, settings: { ...current.settings, ...gameSettings() } };
@@ -667,7 +680,7 @@ bindBar({
 bindMenu({
   settings,
   sizes: SIZES,
-  animals: Object.entries(ANIMALS),
+  animals: animalIds(false).map((id) => [id, ANIMALS[id]]),
   palettes: Object.entries(PALETTES),
   onChange: onSettingChange,
   onClose: closeMenu,
