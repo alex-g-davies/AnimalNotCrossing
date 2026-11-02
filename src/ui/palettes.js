@@ -5,8 +5,9 @@
 // every pair above the threshold. Thick borders are always drawn as well,
 // so color is never the only cue.
 //
-// "Valley" is the Stardew-inspired farm theme: it also switches the whole
-// look to pixel art (see style.css, html[data-palette="valley"]).
+// "Farm" is the palette drawn for the Valley style (the Stardew-inspired
+// pixel look, see style.css html[data-style="valley"]); like the others it
+// can be used under either style.
 
 export const PALETTES = {
   meadow: {
@@ -29,8 +30,8 @@ export const PALETTES = {
     light: ['#e6a3ba', '#a1b6ec', '#e6d1a3', '#b4e3d5', '#e7cbf2', '#edb09e', '#eded9c', '#c6dff5', '#eddad3', '#b4f0b8', '#eaa3e6', '#b09fee'],
     dark: ['#8d345d', '#33518f', '#7c6d44', '#348972', '#4d275a', '#8c3733', '#8d8d32', '#2d4257', '#56392d', '#358a41', '#89338e', '#3c328d'],
   },
-  valley: {
-    name: 'Valley (farm)',
+  farm: {
+    name: 'Farm',
     light: ['#f4f0cc', '#cde8b1', '#edb1b0', '#cfe0ec', '#eebe9e', '#a9d1bd', '#cdbbec', '#f0c5de', '#edee9d', '#a6ea9f', '#a1c6ee', '#edd59c'],
     dark: ['#595427', '#45682a', '#6a2b2b', '#2d4754', '#543e2f', '#865032', '#493271', '#7e365b', '#8d8d33', '#3b8933', '#33628e', '#8f7133'],
   },

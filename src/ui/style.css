@@ -107,7 +107,8 @@ body {
   flex-direction: column;
 }
 
-/* Decoration behind the app: one scene per palette (src/ui/backdrop.js). */
+/* Decoration behind the app: one scene per palette, or the pixel farm in the
+   Valley style (src/ui/backdrop.js). */
 #backdrop { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
 #backdrop .deco-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 html[data-theme="dark"] #backdrop { opacity: 0.6; }
@@ -117,9 +118,9 @@ html[data-theme="dark"] #backdrop { opacity: 0.6; }
 #backdrop .ground { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--safe-bottom) + 66px); background: #b7a940; }
 #backdrop .sprig { position: absolute; top: calc(var(--safe-top) + 44px); left: 2px; width: 54px; }
 #backdrop .sprig.tr { left: auto; right: 2px; transform: scaleX(-1); }
-html[data-palette="valley"] #backdrop { opacity: 1; }
-html[data-palette="valley"][data-theme="dark"] #backdrop .deco { filter: brightness(0.55) saturate(0.7); }
-@media (prefers-color-scheme: dark) { html[data-palette="valley"][data-theme="auto"] #backdrop .deco { filter: brightness(0.55) saturate(0.7); } }
+html[data-style="valley"] #backdrop { opacity: 1; }
+html[data-style="valley"][data-theme="dark"] #backdrop .deco { filter: brightness(0.55) saturate(0.7); }
+@media (prefers-color-scheme: dark) { html[data-style="valley"][data-theme="auto"] #backdrop .deco { filter: brightness(0.55) saturate(0.7); } }
 
 #app {
   position: relative;
@@ -511,26 +512,27 @@ button.link {
 #board[data-n="11"] .cell .icon svg, #board[data-n="12"] .cell .icon svg, #board[data-n="11"] .cell .icon img, #board[data-n="12"] .cell .icon img { width: 88%; height: 88%; }
 #board[data-n="11"] .cell.mark .icon::after, #board[data-n="12"] .cell.mark .icon::after { width: 40%; height: 40%; }
 
-/* Valley: the Stardew-inspired farm look. Pixel edges, chunky lines, a wooden
-   frame around the board and parchment or night-sky backgrounds. */
-html[data-palette="valley"] {
+/* Valley style (html[data-style="valley"], any palette): the Stardew-inspired
+   pixel look. Pixel edges, chunky lines, a wooden frame around the board,
+   parchment or night-sky backgrounds, and the pixel portraits. */
+html[data-style="valley"] {
   --radius: 4px;
   --cell-radius: 0;
   --font: "Pixelify Sans", "Trebuchet MS", "Verdana", system-ui, sans-serif;
 }
-html[data-palette="valley"] body { font-size: 1.05rem; }
-html[data-palette="valley"] #subtitle { font-size: 1.05rem; letter-spacing: 0.03em; }
-html[data-palette="valley"] .bar-btn { font-size: 0.85rem; }
-html[data-palette="valley"] .card h2 { font-size: 1.5rem; }
-html[data-palette="valley"] #overlay-message { font-size: 1.2rem; }
-html[data-palette="valley"] body {
+html[data-style="valley"] body { font-size: 1.05rem; }
+html[data-style="valley"] #subtitle { font-size: 1.05rem; letter-spacing: 0.03em; }
+html[data-style="valley"] .bar-btn { font-size: 0.85rem; }
+html[data-style="valley"] .card h2 { font-size: 1.5rem; }
+html[data-style="valley"] #overlay-message { font-size: 1.2rem; }
+html[data-style="valley"] body {
   background-color: var(--bg);
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
   background-size: 8px 8px;
 }
-html[data-palette="valley"]:is([data-theme="light"], [data-theme="auto"]) body {
+html[data-style="valley"]:is([data-theme="light"], [data-theme="auto"]) body {
   --bg: #f4e4bd;
   --card: #fbf1d9;
   --board-thick: #5a3a1e;
@@ -540,7 +542,7 @@ html[data-palette="valley"]:is([data-theme="light"], [data-theme="auto"]) body {
   --muted: #7d6446;
 }
 @media (prefers-color-scheme: dark) {
-  html[data-palette="valley"][data-theme="auto"] body {
+  html[data-style="valley"][data-theme="auto"] body {
     --bg: #1b1f2e;
     --card: #262b3d;
     --board-thick: #d9c9a3;
@@ -550,7 +552,7 @@ html[data-palette="valley"]:is([data-theme="light"], [data-theme="auto"]) body {
     --muted: #a99f8a;
   }
 }
-html[data-palette="valley"][data-theme="dark"] body {
+html[data-style="valley"][data-theme="dark"] body {
   --bg: #1b1f2e;
   --card: #262b3d;
   --board-thick: #d9c9a3;
@@ -559,7 +561,7 @@ html[data-palette="valley"][data-theme="dark"] body {
   --fg: #f0e8d6;
   --muted: #a99f8a;
 }
-html[data-palette="valley"] #board {
+html[data-style="valley"] #board {
   border-radius: 0;
   border-width: 4px;
   box-shadow:
@@ -568,21 +570,21 @@ html[data-palette="valley"] #board {
     0 10px 24px rgba(0, 0, 0, 0.25);
   image-rendering: pixelated;
 }
-html[data-palette="valley"] .cell .icon svg { image-rendering: pixelated; width: 80%; height: 80%; }
-html[data-palette="valley"] .cell.mark .icon::after {
+html[data-style="valley"] .cell .icon svg { image-rendering: pixelated; width: 80%; height: 80%; }
+html[data-style="valley"] .cell.mark .icon::after {
   background:
     linear-gradient(45deg, transparent 40%, var(--mark) 40%, var(--mark) 60%, transparent 60%),
     linear-gradient(-45deg, transparent 40%, var(--mark) 40%, var(--mark) 60%, transparent 60%);
 }
-html[data-palette="valley"] #bar, html[data-palette="valley"] .card, html[data-palette="valley"] .sheet select {
+html[data-style="valley"] #bar, html[data-style="valley"] .card, html[data-style="valley"] .sheet select {
   border-radius: 4px;
   border-width: 2px;
   box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.18);
 }
-html[data-palette="valley"] .bar-btn { border-radius: 2px; }
-html[data-palette="valley"] .sheet section > label, html[data-palette="valley"] .sheet section > .row.gap, html[data-palette="valley"] .sheet section > #stats, html[data-palette="valley"] .sheet section > .note { border-radius: 0 !important; }
-html[data-palette="valley"] button.primary { border-radius: 4px; box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.25); }
-html[data-palette="valley"] #overlay-art svg, html[data-palette="valley"] #overlay-art img { animation: hop 0.9s steps(2, end) infinite; }
+html[data-style="valley"] .bar-btn { border-radius: 2px; }
+html[data-style="valley"] .sheet section > label, html[data-style="valley"] .sheet section > .row.gap, html[data-style="valley"] .sheet section > #stats, html[data-style="valley"] .sheet section > .note { border-radius: 0 !important; }
+html[data-style="valley"] button.primary { border-radius: 4px; box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.25); }
+html[data-style="valley"] #overlay-art svg, html[data-style="valley"] #overlay-art img { animation: hop 0.9s steps(2, end) infinite; }
 @keyframes hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
 /* Win confetti: a few falling pieces, cheap and brief. */
@@ -602,7 +604,7 @@ html[data-palette="valley"] #overlay-art svg, html[data-palette="valley"] #overl
   opacity: 0.9;
   animation: fall 1.8s ease-in forwards;
 }
-html[data-palette="valley"] .confetti i { border-radius: 0; }
+html[data-style="valley"] .confetti i { border-radius: 0; }
 @keyframes fall {
   from { transform: translateY(0) rotate(0deg); }
   to { transform: translateY(105vh) rotate(540deg); opacity: 0.4; }
@@ -612,4 +614,4 @@ html[data-palette="valley"] .confetti i { border-radius: 0; }
    hop) stay on the svg, so the sway lives on the inner group. */
 .adv .wobble { transform-box: fill-box; transform-origin: 50% 92%; animation: sway 2.4s ease-in-out infinite; }
 @keyframes sway { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(7deg); } }
-html[data-palette="valley"] .cell .icon svg.adv { image-rendering: auto; }
+html[data-style="valley"] .cell .icon svg.adv { image-rendering: auto; }

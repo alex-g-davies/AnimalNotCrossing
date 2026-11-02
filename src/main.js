@@ -31,6 +31,7 @@ const DEFAULT_SETTINGS = {
   timer: false,
   animal: DEFAULT_ANIMAL,
   theme: 'auto',
+  style: 'normal', // 'normal' or 'valley' (the pixel look)
   palette: DEFAULT_PALETTE,
   randomPalettes: Object.keys(PALETTES), // the subset "random" picks from
   lines: 'normal',
@@ -40,10 +41,17 @@ const DEFAULT_SETTINGS = {
 const settings = { ...DEFAULT_SETTINGS, ...(load(KEYS.settings, {}) || {}) };
 if (settings.tapMode === 'mark-first' || settings.tapMode === 'animal-first') settings.tapMode = 'hold';
 
-// Look settings can be previewed from the URL (?palette=valley&animal=cow&theme=dark)
+// Look settings can be previewed from the URL (?style=valley&animal=cow&theme=dark)
 // without being saved; handy for sharing a look and for screenshots.
 const params = new URLSearchParams(location.search);
-for (const key of ['palette', 'animal', 'theme', 'lines']) if (params.has(key)) settings[key] = params.get(key);
+for (const key of ['style', 'palette', 'animal', 'theme', 'lines']) if (params.has(key)) settings[key] = params.get(key);
+// Until Nov 2026 "Valley" was a palette that also switched the whole look. It
+// is now the Valley style plus the "Farm" colours; old saves are mapped.
+if (settings.palette === 'valley') {
+  settings.style = 'valley';
+  settings.palette = 'farm';
+}
+if (Array.isArray(settings.randomPalettes)) settings.randomPalettes = settings.randomPalettes.map((id) => (id === 'valley' ? 'farm' : id));
 let current = null; // game state
 let hint = null; // { tier, data }
 let nextPuzzle = null; // a pre-generated puzzle waiting for "New"
@@ -79,12 +87,13 @@ function enabledPalettes() {
   return ids.length ? ids : Object.keys(PALETTES);
 }
 function activePalette() {
-  const id = settings.palette === RANDOM ? current && current.look && current.look.palette : settings.palette;
+  let id = settings.palette === RANDOM ? current && current.look && current.look.palette : settings.palette;
+  if (id === 'valley') id = 'farm'; // games saved before the style toggle
   return id in PALETTES ? id : DEFAULT_PALETTE;
 }
-// The icon style follows the theme: Valley uses the pixel-style portraits.
+// The Valley style uses the pixel-style portraits, paw and backdrop.
 function pixelLook() {
-  return activePalette() === 'valley';
+  return settings.style === 'valley';
 }
 // Advanced mode replaces every animal icon, whatever the theme.
 function animalSvg(id = activeAnimal()) {
@@ -98,10 +107,11 @@ function pawSvg() {
 function applyLook() {
   const palette = activePalette();
   document.documentElement.dataset.theme = settings.theme;
+  document.documentElement.dataset.style = pixelLook() ? 'valley' : 'normal';
   document.documentElement.dataset.palette = palette;
   document.documentElement.dataset.lines = LINE_WEIGHTS.includes(settings.lines) ? settings.lines : 'normal';
   applyPalette(palette, isDark());
-  applyBackdrop(palette);
+  applyBackdrop(pixelLook() ? 'valley' : palette);
   board.setAnimal(animalSvg());
   if (current) renderMistakes(game.mistakesLeft(current), current.mistakeLimit, pawSvg());
 }
@@ -615,7 +625,7 @@ function onSettingChange(key, value) {
     persist();
     applyLook();
   }
-  if (key === 'theme' || key === 'palette' || key === 'animal' || key === 'advanced' || key === 'lines') applyLook();
+  if (['theme', 'style', 'palette', 'animal', 'advanced', 'lines'].includes(key)) applyLook();
   if (key === 'timer') timer.show(value || Boolean(current && current.puzzle.climb));
   if ((key === 'tapMode' || key === 'autoMark' || key === 'relaxed') && current) {
     current = { ...current, settings: { ...current.settings, ...gameSettings() } };

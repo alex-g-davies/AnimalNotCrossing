@@ -41,7 +41,7 @@ Deploy is a push to `main`; GitHub Pages serves the repo root.
 
 ## Tools and quirks
 
-- `node tools/screenshot.js out.png "query" [w] [h] [actions-js]`: phone-size screenshots via headless Chrome and the DevTools protocol (no dependency). Look settings can be forced through URL params (`?palette=valley&animal=cow&theme=dark&lines=heavy`).
+- `node tools/screenshot.js out.png "query" [w] [h] [actions-js]`: phone-size screenshots via headless Chrome and the DevTools protocol (no dependency). Look settings can be forced through URL params (`?style=valley&animal=cow&theme=dark&lines=heavy`).
 - `node tools/cut-decor.js sheet.png x y w h scale out.png [edges]` cuts one keyed rectangle (used for the Valley farm strip and sprig).
 - `node tools/make-icons.js` regenerates the app icons from `img/animals/cat.png` (headless Chrome canvas).
 - `node tools/cut-sheet.js art/sheet.png 4 3 256 img/animals cat,dog,...` re-cuts the animal portraits from a sheet; set `CUT_DEBUG=dir` to also write keying masks and print the sampled patches. Check the "tile NNNNNpx" column: a tile whose background was not found reports a small number. Adding an animal means: cut it from both a portrait sheet and a Valley sheet, add name and plural in `src/ui/animals.js`, and both PNGs to `sw.js`.

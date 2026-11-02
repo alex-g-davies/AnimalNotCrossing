@@ -20,10 +20,10 @@ Useful extras:
 
 ```
 node tools/make-icons.js                       # regenerates icons/*.png
-node tools/screenshot.js out.png "palette=valley&animal=cow&theme=dark" 393 852
+node tools/screenshot.js out.png "style=valley&animal=cow&theme=dark" 393 852
 ```
 
-The look can be previewed from the URL without saving it: `?palette=valley&animal=chicken&theme=light`.
+The look can be previewed from the URL without saving it: `?style=valley&palette=farm&animal=chicken&theme=light`.
 
 ## How it works
 

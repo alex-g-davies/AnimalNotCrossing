@@ -103,6 +103,7 @@ export function bindMenu({ settings, sizes, animals, palettes, onChange, onClose
     timer: ['set-timer', 'checked', Boolean],
     animal: ['set-animal', 'value', String],
     theme: ['set-theme', 'value', String],
+    style: ['set-style', 'value', String],
     palette: ['set-palette', 'value', String],
     lines: ['set-lines', 'value', String],
     advanced: ['set-advanced', 'checked', Boolean],

@@ -1,6 +1,7 @@
-// Decoration around the board, one scene per colour palette. Rendered once
-// into #backdrop (fixed, behind the app, no pointer events). Everything is
-// inline SVG except Valley, which uses pieces cut from the owner's sheet.
+// Decoration around the board: one scene per colour palette in the normal
+// style, and the pixel farm (pieces cut from the owner's sheet) whenever the
+// Valley style is on. Rendered once into #backdrop (fixed, behind the app,
+// no pointer events). Everything but the Valley scene is inline SVG.
 // Colours are chosen to sit quietly on both the light and the dark theme;
 // style.css lowers the opacity further in the dark theme.
 
@@ -88,15 +89,35 @@ function dusk() {
   return svg(`${stars}${moon}${hills}`);
 }
 
+// The Farm colours in the normal style: rolling fields, a fence and the sun.
+function farm() {
+  const rnd = seeded(13);
+  let posts = '';
+  for (let x = 10; x < 400; x += 46) {
+    posts += `<rect x="${x}" y="${744 + rnd() * 6}" width="7" height="34" rx="2" fill="#a0713f" opacity="0.55"/>`;
+  }
+  const rails = `<rect x="-20" y="752" width="440" height="5" rx="2" fill="#b98652" opacity="0.5"/><rect x="-20" y="766" width="440" height="5" rx="2" fill="#b98652" opacity="0.5"/>`;
+  const hills = `<path d="M-20 740 Q 100 690 220 730 T 420 715 L420 820 L-20 820 Z" fill="#9ccc6a" opacity="0.4"/>
+    <path d="M-20 775 Q 140 745 260 780 T 420 770 L420 820 L-20 820 Z" fill="#6fae5c" opacity="0.45"/>`;
+  let wheat = '';
+  for (let i = 0; i < 10; i++) {
+    const x = i < 5 ? 8 + rnd() * 40 : 352 + rnd() * 40, y = 700 + rnd() * 30, h = 26 + rnd() * 20;
+    wheat += `<path d="M${x.toFixed(1)} ${y.toFixed(1)} v${h.toFixed(1)}" stroke="#d9b45a" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/><ellipse cx="${x.toFixed(1)}" cy="${(y - 4).toFixed(1)}" rx="4" ry="9" fill="#e8c86a" opacity="0.65"/>`;
+  }
+  const sun = `<circle cx="350" cy="80" r="26" fill="#f6c453" opacity="0.55"/><circle cx="350" cy="80" r="38" fill="none" stroke="#f6c453" stroke-width="3" stroke-dasharray="6 10" opacity="0.4"/>`;
+  return svg(`${sun}${hills}${wheat}${rails}${posts}`);
+}
+
 function valley() {
   return `<div class="deco ground"></div><img class="deco farm" src="img/valley/farm.png" alt="" draggable="false">
     <img class="deco sprig tl" src="img/valley/sprig.png" alt="" draggable="false">
     <img class="deco sprig tr" src="img/valley/sprig.png" alt="" draggable="false">`;
 }
 
-const SCENES = { meadow, sorbet, ocean, dusk, valley };
+const SCENES = { meadow, sorbet, ocean, dusk, farm, valley };
 
-export function backdropMarkup(palette) {
-  const scene = SCENES[palette];
+// `id` is a palette id, or 'valley' for the Valley style's own scene.
+export function backdropMarkup(id) {
+  const scene = SCENES[id];
   return scene ? scene() : '';
 }

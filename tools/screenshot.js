@@ -1,7 +1,7 @@
 // Phone-size screenshots of the running app via headless Chrome and the
 // DevTools protocol. No dependencies (Node 22+ has a global WebSocket).
 //
-//   node tools/screenshot.js out.png "palette=valley&animal=cow&theme=dark" [width] [height] [actions]
+//   node tools/screenshot.js out.png "style=valley&animal=cow&theme=dark" [width] [height] [actions]
 //
 // `actions` is optional JavaScript run in the page after the board appears
 // (for example to place animals or open the menu) before the capture.
