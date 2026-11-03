@@ -27,7 +27,7 @@ The look can be previewed from the URL without saving it: `?style=valley&palette
 
 ## How it works
 
-- `src/core/generator.js` places the animals, grows regions around them, then repairs the layout by moving boundary cells between regions and keeping any move that leaves fewer cells unresolved by the deduction engine. When nothing is unresolved the puzzle is unique and solvable by logic.
+- `src/core/generator.js` places the animals, grows regions around them, then repairs the layout by moving boundary cells between regions (mostly at the cells the engine could not resolve) and keeping any move that leaves no more cells unresolved by the deduction engine. When nothing is unresolved the puzzle is unique and solvable by logic. A layout that comes out at the wrong difficulty is nudged into the requested one rather than discarded.
 - `src/core/techniques.js` is that deduction engine (levels 1 to 3, plus an optional lookahead level 4). It also grades difficulty and powers hints.
 - `src/core/solver.js` is a fast counting solver used as a second proof of uniqueness; `test/reference-solver.js` is a third, deliberately different one used only by tests and the bench.
 - `src/core/game.js` holds the game state as pure functions: taps, undo, mistakes, win and loss.

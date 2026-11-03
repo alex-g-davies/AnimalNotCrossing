@@ -6,7 +6,9 @@ Static, dependency-free puzzle PWA. The full build guide is `GUIDE.md`; read it 
 
 ```
 npm test          # node --test test/   (Node >= 20, built-in runner, no framework)
-npm run bench     # node test/uniqueness.bench.js  -> rewrites PERF.md with measured numbers
+npm run bench     # node test/uniqueness.bench.js  -> rewrites PERF.md with measured numbers (parallel, ~minutes)
+npm run bench:quick  # 100 puzzles per row, reusing cached rows whose core code is unchanged (--resume)
+#   options: --rows 2:11:medium,1:12:hard  --workers 7  --count N  --resume
 npm run serve     # node tools/serve.js -> http://localhost:8080/  (service worker works on localhost)
 ```
 
@@ -47,7 +49,8 @@ Deploy is a push to `main`; GitHub Pages serves the repo root.
 - `node tools/make-icons.js` regenerates the app icons from `img/animals/cat.png` (headless Chrome canvas).
 - `node tools/cut-sheet.js art/sheet.png 4 3 256 img/animals cat,dog,...` re-cuts the animal portraits from a sheet; set `CUT_DEBUG=dir` to also write keying masks and print the sampled patches. Check the "tile NNNNNpx" column: a tile whose background was not found reports a small number. Adding an animal means: cut it from both a portrait sheet and a Valley sheet, add name and plural in `src/ui/animals.js`, and both PNGs to `sw.js`.
 - The service worker is cache-first: while developing, unregister it or bump `CACHE_VERSION`, or changes will not show.
-- Measured: random region layouts are almost never unique (0% at 10x10+), so the generator repairs layouts with the deduction engine as the objective. Difficulty: easy = levels 1-2, medium = level 3 with few level-3 steps, hard = many. See PERF.md.
+- Measured: random region layouts are almost never unique (0% at 10x10+), so the generator repairs layouts with the deduction engine as the objective. Repair moves are aimed at the cells the engine left unresolved, a placement that stops improving is abandoned (`stallEvals`), and a solvable layout of the wrong difficulty is nudged into the requested band (`tuneDifficulty`) instead of thrown away; the deduction state caches per-unit animal counts. Together (Nov 2, 2026) this made generation 5 to 10 times faster. Difficulty: easy = levels 1-2, medium = level 3 with few level-3 steps, hard = many. See PERF.md.
+- The bench runs rows on worker threads and caches finished rows in `.bench-cache/` (gitignored) keyed by a hash of `src/core`; `--resume` skips rows whose code has not changed.
 
 ## Layout
 

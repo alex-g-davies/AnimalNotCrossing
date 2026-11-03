@@ -19,8 +19,8 @@
 import { createRng } from './rng.js';
 import { countSolutions } from './solver.js';
 import { isSolutionCell, isValidSolution } from './rules.js';
-import { solveByDeduction, unknownCount } from './techniques.js';
-import { DIFFICULTIES, gradePuzzle } from './difficulty.js';
+import { UNKNOWN, solveByDeduction } from './techniques.js';
+import { DIFFICULTIES, MEDIUM_MAX_LEVEL3_STEPS, gradePuzzle, labelFor } from './difficulty.js';
 
 export const MIN_SIZE = 6;
 export const MAX_SIZE = 12;
@@ -271,51 +271,111 @@ function staysConnected(regions, id, skipR, skipC) {
   return seen.size === total;
 }
 
-// Cells the deduction engine cannot resolve, or 0 when it solves the puzzle.
+// Cells the deduction engine cannot resolve (score 0 means it solves the
+// puzzle), which cells they are, and the engine's level counts.
 function unresolved(n, regions, k, maxLevel) {
   const result = solveByDeduction({ n, regions, k }, { maxLevel });
-  return result.solved ? 0 : unknownCount(result.state) + 1;
+  const stuck = [];
+  if (!result.solved) result.state.cells.forEach((v, i) => { if (v === UNKNOWN) stuck.push(i); });
+  return { score: result.solved ? 0 : stuck.length + 1, stuck, levelCounts: result.levelCounts };
 }
 
-// Step 3. Hill-climb on the region layout. Each move hands one boundary cell
-// to a neighbouring region, as long as both regions keep a legal size, the
-// giving region stays connected and the cell is not one of the solution cells.
-// A move is kept when the deduction engine leaves no more cells unresolved
-// than before. Returns the final score (0 means solved by logic).
-export function repairRegions(n, regions, solution, rng, { maxLevel, minSize, maxEvals, k = 1 }) {
+// One candidate move: hand cell (r, c) to the neighbouring region in a random
+// direction, if both regions keep a legal size, the giving region stays
+// connected and the cell is not a solution cell. Returns the move or null.
+function pickMove(n, regions, puzzle, sizes, rng, { minSize, maxSize, focus }) {
+  let r, c;
+  // Moves at the cells the engine could not resolve are far more likely to
+  // help than moves anywhere on the board, so most picks come from there.
+  if (focus && focus.length && rng.next() < 0.7) {
+    const i = focus[rng.int(focus.length)];
+    r = Math.floor(i / n);
+    c = i % n;
+  } else {
+    r = rng.int(n);
+    c = rng.int(n);
+  }
+  if (isSolutionCell(puzzle, r, c)) return null;
+  const from = regions[r][c];
+  const [dr, dc] = ORTHOGONAL[rng.int(4)];
+  const nr = r + dr;
+  const nc = c + dc;
+  if (nr < 0 || nr >= n || nc < 0 || nc >= n) return null;
+  const to = regions[nr][nc];
+  if (to === from || sizes[from] <= minSize || sizes[to] >= maxSize) return null;
+  if (!staysConnected(regions, from, r, c)) return null;
+  return { r, c, from, to };
+}
+
+// Step 3. Hill-climb on the region layout. A move is kept when the deduction
+// engine leaves no more cells unresolved than before. Returns the final score
+// (0 means solved by logic). A placement that has not improved for
+// `stallEvals` moves is abandoned: a fresh placement is cheaper than grinding.
+export function repairRegions(n, regions, solution, rng, { maxLevel, minSize, maxEvals, k = 1, stallEvals = 400 }) {
   const puzzle = { solution };
   const sizes = regionSizes(regions);
   const maxSize = Math.floor(MAX_REGION_SHARE * n * n);
-  let score = unresolved(n, regions, k, maxLevel);
+  let current = unresolved(n, regions, k, maxLevel);
   let evals = 0;
-  while (score > 0 && evals < maxEvals) {
-    const r = rng.int(n);
-    const c = rng.int(n);
-    if (isSolutionCell(puzzle, r, c)) continue;
-    const from = regions[r][c];
-    const [dr, dc] = ORTHOGONAL[rng.int(4)];
-    const nr = r + dr;
-    const nc = c + dc;
-    if (nr < 0 || nr >= n || nc < 0 || nc >= n) continue;
-    const to = regions[nr][nc];
-    if (to === from || sizes[from] <= minSize || sizes[to] >= maxSize) continue;
-    if (!staysConnected(regions, from, r, c)) continue;
-    regions[r][c] = to;
+  let lastImprovement = 0;
+  while (current.score > 0 && evals < maxEvals && evals - lastImprovement < stallEvals) {
+    const move = pickMove(n, regions, puzzle, sizes, rng, { minSize, maxSize, focus: current.stuck });
+    if (!move) continue;
+    regions[move.r][move.c] = move.to;
     evals++;
     const next = unresolved(n, regions, k, maxLevel);
-    if (next <= score) {
-      score = next;
-      sizes[from]--;
-      sizes[to]++;
+    if (next.score <= current.score) {
+      if (next.score < current.score) lastImprovement = evals;
+      current = next;
+      sizes[move.from]--;
+      sizes[move.to]++;
     } else {
-      regions[r][c] = from;
+      regions[move.r][move.c] = move.from;
     }
   }
-  return { score, evals };
+  return { score: current.score, evals, stalled: current.score > 0 && evals - lastImprovement >= stallEvals };
+}
+
+// How far a solved layout's level-3 step count is from the requested
+// difficulty's band (see difficulty.js): 0 when the label already matches.
+function difficultyGap(levelCounts, difficulty) {
+  const l3 = levelCounts[3];
+  if (labelFor({ solved: true, maxLevelUsed: l3 ? 3 : 2, levelCounts }) === difficulty) return 0;
+  if (difficulty === 'medium') return l3 === 0 ? 1 : l3 - MEDIUM_MAX_LEVEL3_STEPS;
+  if (difficulty === 'hard') return MEDIUM_MAX_LEVEL3_STEPS + 1 - l3;
+  return l3; // easy: any level-3 step is one too many
+}
+
+// Step 3b. A layout that is solvable but grades as the wrong difficulty used
+// to be thrown away with all its repair work. Instead keep moving cells,
+// accepting moves that keep the puzzle solvable and bring the level-3 step
+// count no further from the requested band, until the label matches.
+export function tuneDifficulty(n, regions, solution, rng, { difficulty, maxLevel, minSize, maxEvals, k = 1, levelCounts }) {
+  const puzzle = { solution };
+  const sizes = regionSizes(regions);
+  const maxSize = Math.floor(MAX_REGION_SHARE * n * n);
+  let gap = difficultyGap(levelCounts, difficulty);
+  let evals = 0;
+  while (gap > 0 && evals < maxEvals) {
+    const move = pickMove(n, regions, puzzle, sizes, rng, { minSize, maxSize, focus: null });
+    if (!move) continue;
+    regions[move.r][move.c] = move.to;
+    evals++;
+    const next = unresolved(n, regions, k, maxLevel);
+    const nextGap = next.score === 0 ? difficultyGap(next.levelCounts, difficulty) : Infinity;
+    if (nextGap <= gap) {
+      gap = nextGap;
+      sizes[move.from]--;
+      sizes[move.to]++;
+    } else {
+      regions[move.r][move.c] = move.from;
+    }
+  }
+  return { matched: gap === 0, evals };
 }
 
 // Main entry point. Deterministic for a given (n, seed, difficulty, k).
-export function generatePuzzle({ n, seed, difficulty = 'medium', k = 1, maxEvals = 3000, maxPlacements = 50 }) {
+export function generatePuzzle({ n, seed, difficulty = 'medium', k = 1, maxEvals = 3000, maxTuneEvals = 300, maxPlacements = 50 }) {
   const minSize = k === 2 ? MIN_DOUBLE_SIZE : MIN_SIZE;
   const maxSize = k === 2 ? MAX_DOUBLE_SIZE : MAX_SIZE;
   if (!Number.isInteger(n) || n < minSize || n > maxSize) {
@@ -325,7 +385,7 @@ export function generatePuzzle({ n, seed, difficulty = 'medium', k = 1, maxEvals
   const spec = DIFFICULTIES[difficulty];
   if (!spec) throw new Error(`unknown difficulty ${difficulty}`);
   const rng = createRng(seed);
-  const stats = { placements: 0, evals: 0, unsolved: 0, badShape: 0, wrongDifficulty: 0, badLayout: 0 };
+  const stats = { placements: 0, evals: 0, unsolved: 0, stalled: 0, badShape: 0, wrongDifficulty: 0, tuned: 0, badLayout: 0 };
 
   for (let p = 0; p < maxPlacements; p++) {
     stats.placements++;
@@ -344,17 +404,27 @@ export function generatePuzzle({ n, seed, difficulty = 'medium', k = 1, maxEvals
     stats.evals += repaired.evals;
     if (repaired.score !== 0) {
       stats.unsolved++;
+      if (repaired.stalled) stats.stalled++;
       continue;
     }
-    if (checkShape(regions, { allowSingles: spec.allowSingles && k === 1 })) {
+    const allowSingles = spec.allowSingles && k === 1;
+    if (checkShape(regions, { allowSingles })) {
       stats.badShape++;
       continue;
     }
     const puzzle = { n, regions, solution, seed, difficulty, k };
-    const grade = gradePuzzle(puzzle);
+    let grade = gradePuzzle(puzzle);
     if (grade.label !== difficulty) {
-      stats.wrongDifficulty++;
-      continue;
+      const tuned = tuneDifficulty(n, regions, solution, rng, {
+        difficulty, maxLevel: spec.maxLevel, minSize: allowSingles ? 1 : 2, maxEvals: maxTuneEvals, k, levelCounts: grade.levelCounts,
+      });
+      stats.evals += tuned.evals;
+      grade = gradePuzzle(puzzle);
+      if (grade.label !== difficulty || checkShape(regions, { allowSingles })) {
+        stats.wrongDifficulty++;
+        continue;
+      }
+      stats.tuned++;
     }
     // Belt and braces: the deduction engine is sound, so this must hold.
     const counted = countSolutions(puzzle, 2);
