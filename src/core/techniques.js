@@ -56,23 +56,39 @@ export function createState(puzzle, board = null) {
     col: Array.from({ length: n }, (_, c) => Array.from({ length: n }, (_, r) => r * n + c)),
     region: regionCells,
   };
-  const state = { n, k, regions, regionCells, cells, rowIndex, colIndex, regionIndex, units };
+  // Animals per unit, kept up to date by placeAnimal. Profiling showed that
+  // recounting them on every lookup was over half of all deduction time.
+  const animals = { row: new Uint8Array(n), col: new Uint8Array(n), region: new Uint8Array(n) };
+  const state = { n, k, regions, regionCells, cells, rowIndex, colIndex, regionIndex, units, animals };
   // A board loaded from the player may hold animals whose eliminations have
   // not been applied yet; apply them so the engine starts from a consistent view.
   if (board) {
+    for (let i = 0; i < n * n; i++) if (cells[i] === ANIMAL) countAnimal(state, i);
     for (let i = 0; i < n * n; i++) if (cells[i] === ANIMAL) eliminateAround(state, i);
   }
   return state;
 }
 
 export function cloneState(state) {
-  return { ...state, cells: new Uint8Array(state.cells) };
+  const { row, col, region } = state.animals;
+  return { ...state, cells: new Uint8Array(state.cells), animals: { row: new Uint8Array(row), col: new Uint8Array(col), region: new Uint8Array(region) } };
+}
+
+function countAnimal(state, index) {
+  state.animals.row[state.rowIndex[index]]++;
+  state.animals.col[state.colIndex[index]]++;
+  state.animals.region[state.regionIndex[index]]++;
+}
+
+function placeAnimal(state, index) {
+  if (state.cells[index] === ANIMAL) return;
+  state.cells[index] = ANIMAL;
+  countAnimal(state, index);
+  eliminateAround(state, index);
 }
 
 function unitAnimals(state, type, index) {
-  let k = 0;
-  for (const i of state.units[type][index]) if (state.cells[i] === ANIMAL) k++;
-  return k;
+  return state.animals[type][index];
 }
 
 // Everything a placed animal rules out: the eight cells around it, and its
@@ -138,10 +154,7 @@ function sees(state, a, b) {
 }
 
 export function applyDeduction(state, d) {
-  if (d.place !== undefined && d.place !== null) {
-    state.cells[d.place] = ANIMAL;
-    eliminateAround(state, d.place);
-  }
+  if (d.place !== undefined && d.place !== null) placeAnimal(state, d.place);
   if (d.eliminate) for (const i of d.eliminate) if (state.cells[i] === UNKNOWN) state.cells[i] = OUT;
 }
 
@@ -153,7 +166,7 @@ export function unknownCount(state) {
 
 export function animalCount(state) {
   let k = 0;
-  for (const v of state.cells) if (v === ANIMAL) k++;
+  for (const v of state.animals.row) k += v;
   return k;
 }
 
