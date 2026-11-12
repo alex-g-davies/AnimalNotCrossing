@@ -46,7 +46,7 @@ export const ANIMALS = {
   // versions yet, so `pixel: false` shows the regular portrait in Valley too.
   newfie: { name: 'newfie', plural: 'newfies', pixel: false },
   leonberger: { name: 'leonberger', plural: 'leonbergers', pixel: false },
-  bernese: { name: 'Bernese', plural: 'Berneses', pixel: false },
+  berner: { name: 'berner', plural: 'berners', pixel: false },
   golden: { name: 'golden retriever', plural: 'golden retrievers', pixel: false },
   capybara: { name: 'capybara', plural: 'capybaras', pixel: false },
   redpanda: { name: 'red panda', plural: 'red pandas', pixel: false },
@@ -56,6 +56,8 @@ export const ANIMALS = {
   bat: { name: 'bat', plural: 'bats', pixel: false },
   alpaca: { name: 'alpaca', plural: 'alpacas', pixel: false },
   hamster: { name: 'hamster', plural: 'hamsters', pixel: false },
+  // A single portrait (art/Kawaii Crowned Girl Avatar.png).
+  princess: { name: 'princess', plural: 'princesses', pixel: false },
   // Christmas sheets (art/Christmas Animal Grid.png and art/Valley Christmas
   // Grid.png), same order. Shown only with the Christmas colours; `base` names
   // the everyday animal a dressed-up one stands in for.
