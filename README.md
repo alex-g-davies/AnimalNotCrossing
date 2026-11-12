@@ -33,7 +33,7 @@ The look can be previewed from the URL without saving it: `?style=valley&palette
 - `src/core/game.js` holds the game state as pure functions: taps, undo, mistakes, win and loss.
 - `src/core/climb.js` is climb mode: a ladder from 6×6 easy to 12×12 hard, each stage against a countdown, until a loss or the clock ends the run. The menu's Advanced section can cap the board, change the ramp and tighten the clock; such custom ladders keep their own best. `src/core/stats.js` keeps win streaks, play time and per-combination times, which the Stats page (`src/ui/statspage.js`) shows with trends. The Trophies page (`src/core/trophies.js`, `src/ui/trophies.js`) keeps bronze, silver, gold and crystal cups for each climb ladder, each with the quickest run to that tier and the character that earned it, plus rosettes for streak, daily, Double Up and games milestones; `src/core/spec.js` resolves the "random" size, difficulty, animal and colour settings once per puzzle, and the mode (classic or Double Up, `k` animals per line).
 - The look is a Style (normal, or the pixel-art Valley look) plus a colour palette. The Christmas palette adds snow and swaps in the festive animal set.
-- `src/messages.js` holds the messages shown after every game, about a third of them cheeky. Edit them freely.
+- `src/messages.js` holds the kind messages shown after every game. Edit them freely.
 - The animal portraits come from one sheet, `art/Kawaii Animal Icon Grid.png`. To re-cut them after editing the sheet (4 columns, 3 rows, in menu order):
 
   ```
