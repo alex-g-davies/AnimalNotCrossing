@@ -43,7 +43,8 @@ The look can be previewed from the URL without saving it: `?style=valley&palette
   node tools/cut-sheet.js "art/Valley Pixel Grid 2.png" 4 4 256 img/valley bear,panda,mouse,raccoon,lion,tiger,monkey,koala,deer,elephant,owl,seal
   node tools/cut-sheet.js "art/Aquatic Animal Grid.png" 4 3 256 img/animals clownfish,dolphin,whale,octopus,turtle,shark,crab,seahorse,jellyfish,pufferfish,sealpup,narwhal
   node tools/cut-sheet.js "art/Valley Aquatic Grid.png" 4 4 256 img/valley clownfish,dolphin,whale,octopus,turtle,shark,crab,seahorse,jellyfish,pufferfish,sealpup,narwhal
-  node tools/cut-sheet.js "art/Kawaii Chibi Animal Icon Grid.png" 4 3 256 img/animals newfie,leonberger,bernese,golden,capybara,redpanda,otter,sloth,hippo,bat,alpaca,hamster
+  node tools/cut-sheet.js "art/Kawaii Chibi Animal Icon Grid.png" 4 3 256 img/animals newfie,leonberger,berner,golden,capybara,redpanda,otter,sloth,hippo,bat,alpaca,hamster
+  node tools/cut-sheet.js "art/Kawaii Crowned Girl Avatar.png" 1 1 256 img/animals princess
   node tools/cut-sheet.js "art/Christmas Animal Grid.png" 4 3 256 img/animals reindeer,polarbear,xmas-penguin,xmas-fox,xmas-bunny,xmas-mouse,squirrel,robin,xmas-cat,xmas-dog,xmas-sheep,xmas-hedgehog
   node tools/cut-sheet.js "art/Valley Christmas Grid.png" 4 4 256 img/valley reindeer,polarbear,xmas-penguin,xmas-fox,xmas-bunny,xmas-mouse,squirrel,robin,xmas-cat,xmas-dog,xmas-sheep,xmas-hedgehog
   node tools/cut-decor.js "art/Valley Pixel Grid 1.png" 24 905 1400 160 0.75 img/valley/farm.png top "#fde5b0"
