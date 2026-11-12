@@ -7,7 +7,7 @@
 // nothing). X marks and hints do not matter.
 
 export const OVERALL = 'overall';
-export const RESERVED = new Set([OVERALL, 'daily', 'climb', 'climbs']);
+export const RESERVED = new Set([OVERALL, 'daily', 'climb', 'climbs', 'trophies']);
 
 // "8-medium", or "8-medium-double" for Double Up (two animals per line).
 export function comboKey(puzzle) {

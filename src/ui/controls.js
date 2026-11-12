@@ -196,6 +196,24 @@ export function closeStats() {
   $('stats-sheet').hidden = true;
 }
 
+export function bindTrophies({ onOpen }) {
+  $('btn-trophies').addEventListener('click', onOpen);
+  $('btn-trophies-close').addEventListener('click', closeTrophies);
+  $('trophy-sheet').addEventListener('click', (event) => {
+    if (event.target === $('trophy-sheet')) closeTrophies();
+  });
+}
+
+export function openTrophies(html) {
+  $('trophy-body').innerHTML = html;
+  $('trophy-sheet').hidden = false;
+  $('trophy-body').scrollTop = 0;
+}
+
+export function closeTrophies() {
+  $('trophy-sheet').hidden = true;
+}
+
 export function renderStats(html) {
   $('stats-body').innerHTML = html;
 }
