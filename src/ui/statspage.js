@@ -3,7 +3,7 @@
 
 import { comboKeys, streaks, summary, trend } from '../core/stats.js';
 import { liveStreak } from '../core/daily.js';
-import { describeOptions } from '../core/climb.js';
+import { describeOptions, optionsFromKey } from '../core/climb.js';
 
 const SPARK_POINTS = 20;
 
@@ -76,11 +76,6 @@ export function sparkline(times) {
   return `<svg class="spark" viewBox="0 0 ${w} ${h}" aria-label="last ${t.length} win times, lower is quicker">`
     + `<polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>`
     + `<circle cx="${x(best).toFixed(1)}" cy="${y(min).toFixed(1)}" r="2.5" fill="var(--accent)"/></svg>`;
-}
-
-function optionsFromKey(key) {
-  const [maxSize, ramp, clock] = key.split('-');
-  return { maxSize, ramp, clock };
 }
 
 // "2 h 14 min", "14 min", "48 s".

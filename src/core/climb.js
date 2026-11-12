@@ -63,6 +63,13 @@ export function optionsKey(options) {
     : `${o.maxSize}-${o.ramp}-${o.clock}`;
 }
 
+// The options a key from optionsKey stands for.
+export function optionsFromKey(key) {
+  if (key === 'default') return { ...DEFAULT_OPTIONS };
+  const [maxSize, ramp, clock] = String(key).split('-');
+  return normalizeOptions({ maxSize, ramp, clock });
+}
+
 export function describeOptions(options) {
   const o = normalizeOptions(options);
   return `up to ${o.maxSize} × ${o.maxSize}, ${o.ramp} ramp, ${o.clock} clock`;

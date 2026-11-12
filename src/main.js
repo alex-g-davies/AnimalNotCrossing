@@ -16,9 +16,11 @@ import { DEFAULT_PALETTE, FESTIVE_PALETTE, PALETTES, applyPalette } from './ui/p
 import { createBoard } from './ui/board.js';
 import { confetti, formatTime, hideEnd, hideHint, showEnd, showHint, showLoading } from './ui/screens.js';
 import {
-  bindBar, bindMenu, bindStats, closeMenu, createTimer, openMenu, openStats, renderMistakes, renderStats, setAnimalOptions, setSizeOptions, setSubtitle, setUndoEnabled, syncMenu,
+  bindBar, bindMenu, bindStats, bindTrophies, closeMenu, openTrophies, createTimer, openMenu, openStats, renderMistakes, renderStats, setAnimalOptions, setSizeOptions, setSubtitle, setUndoEnabled, syncMenu,
 } from './ui/controls.js';
 import { statsPageHtml } from './ui/statspage.js';
+import { trophyLine, trophyPageHtml } from './ui/trophies.js';
+import { awardClimb, awardMilestones, backfill } from './core/trophies.js';
 
 const LINE_WEIGHTS = ['fine', 'normal', 'bold', 'heavy'];
 
@@ -517,7 +519,7 @@ function finish() {
     title: won ? 'Solved!' : 'Out of paws',
     message,
     timeText: won ? `Time: ${formatTime(current.elapsedMs)} · Streak: ${streak}` : 'Here is how it fits together.',
-    statText,
+    statText: withTrophies(statText, earnedNow),
     artSvg: animalSvg(),
     onNext: startNew,
     onLook: () => hideEnd(),
@@ -539,6 +541,10 @@ function finishClimb(won, message, statText) {
   if (won) {
     climb = clearStage(climb, current.elapsedMs);
     save(KEYS.climb, climb);
+    const awarded = awardClimb(load(KEYS.stats, {}) || {}, optionsKey(climb.options), climb, trophyLook(), dailySpec().key);
+    if (awarded.earned.length) save(KEYS.stats, awarded.stats);
+    statText = withTrophies(statText, [...earnedNow, ...awarded.earned]);
+    earnedNow = [];
     const next = stageSpec(climb.stage, climb.options);
     showEnd({
       status: 'won',
@@ -562,6 +568,7 @@ function finishClimb(won, message, statText) {
     title: current.lostBy === 'time' ? 'Time is up' : 'Out of paws',
     message,
     timeText: `You reached stage ${reached} · Best: stage ${best}`,
+    statText: trophyLine(earnedNow, formatTime),
     artSvg: animalSvg(),
     nextLabel: 'Climb again',
     onNext: startClimb,
@@ -586,8 +593,23 @@ function rememberSeed(seed) {
 function recordResult(won) {
   let stats = recordStats(load(KEYS.stats, {}) || {}, current.puzzle, won, current.elapsedMs);
   if (won && current.puzzle.daily) stats = { ...stats, daily: recordDailySolve(stats.daily, current.puzzle.daily) };
+  const awarded = awardMilestones(stats, trophyLook(), dailySpec().key);
+  stats = awarded.stats;
+  earnedNow = awarded.earned;
   save(KEYS.stats, stats);
   return stats;
+}
+
+// Trophies earned by the game that just ended, for the end card.
+let earnedNow = [];
+
+// What a trophy remembers about the game that earned it.
+function trophyLook() {
+  return { animal: activeAnimal(), style: pixelLook() ? 'valley' : 'normal', palette: activePalette() };
+}
+
+function withTrophies(statText, earned) {
+  return [statText, trophyLine(earned, formatTime)].filter(Boolean).join(' ');
 }
 
 function exportData() {
@@ -699,6 +721,13 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+bindTrophies({
+  onOpen: () => {
+    closeMenu();
+    openTrophies(trophyPageHtml(load(KEYS.stats, {}) || {}, { formatTime, style: pixelLook() ? 'valley' : 'normal' }));
+  },
+});
+
 bindStats({
   onOpen: () => {
     renderStats(statsPageHtml(load(KEYS.stats, {}) || {}, { today: dailySpec().key, formatTime }));
@@ -712,6 +741,12 @@ document.getElementById('btn-climb').addEventListener('click', startClimb);
 
 applyLook();
 requestPersistence();
+{
+  // Award trophies for anything reached before the trophy case existed.
+  const stats = load(KEYS.stats, null);
+  const filled = backfill(stats);
+  if (stats && filled !== stats) save(KEYS.stats, filled);
+}
 
 const saved = load(KEYS.game);
 if (saved && saved.status === 'playing' && saved.puzzle && saved.board) {
