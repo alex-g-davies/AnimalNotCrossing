@@ -12,8 +12,13 @@ test('every animal has a name, a plural, and a portrait for each look', () => {
     assert.equal(typeof animal.name, 'string', id);
     assert.equal(typeof animal.plural, 'string', id);
     assert.match(animal.markup, new RegExp(`img/animals/${id}\.png`), id);
-    assert.match(animal.valleyMarkup, new RegExp(`img/valley/${id}\.png`), id);
     assert.ok(existsSync(`${root}img/animals/${id}.png`), `missing portrait for ${id}`);
+    if (animal.pixel === false) {
+      assert.ok(animal.valleyMarkup.includes(`img/animals/${id}.png`), id);
+      assert.match(animal.valleyMarkup, /smooth/, `${id} keeps smooth scaling in Valley`);
+      continue;
+    }
+    assert.match(animal.valleyMarkup, new RegExp(`img/valley/${id}\.png`), id);
     assert.ok(existsSync(`${root}img/valley/${id}.png`), `missing Valley portrait for ${id}`);
   }
 });
@@ -22,7 +27,7 @@ test('the service worker precaches every portrait', () => {
   const sw = readFileSync(`${root}sw.js`, 'utf8');
   for (const id of Object.keys(ANIMALS)) {
     assert.ok(sw.includes(`./img/animals/${id}.png`), id);
-    assert.ok(sw.includes(`./img/valley/${id}.png`), id);
+    if (ANIMALS[id].pixel !== false) assert.ok(sw.includes(`./img/valley/${id}.png`), id);
   }
 });
 

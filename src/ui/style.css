@@ -579,6 +579,8 @@ html[data-style="valley"] #board {
     0 10px 24px rgba(0, 0, 0, 0.25);
   image-rendering: pixelated;
 }
+/* A portrait with no pixel version yet keeps smooth scaling in Valley. */
+html[data-style="valley"] .animal-img.smooth { image-rendering: auto; }
 html[data-style="valley"] .cell .icon svg { image-rendering: pixelated; width: 80%; height: 80%; }
 html[data-style="valley"] .cell.mark .icon::after {
   background:

@@ -33,14 +33,22 @@ async function cut(b64, cols, rows, size, names) {
   };
   // Page colour: median along three lines just inside the sheet's edge (a
   // sheet may carry a decorative border; corner ornaments are a minority of
-  // the samples). Its texture sets the page flood tolerance.
-  const lineSamples = [];
-  const yTop = Math.round(H * 0.03), xL = Math.round(W * 0.03), xR = W - 1 - xL;
-  for (let x = Math.round(W * 0.05); x < W * 0.95; x += 2) lineSamples.push(px(x, yTop));
-  for (let y = Math.round(H * 0.05); y < H * 0.95; y += 2) lineSamples.push(px(xL, y), px(xR, y));
-  const page = [0, 1, 2].map((k) => median(lineSamples.map((p) => p[k])));
-  const pageDists = lineSamples.map((p) => Math.hypot(p[0] - page[0], p[1] - page[1], p[2] - page[2])).sort((a, b) => a - b);
-  const pageNoise = pageDists[Math.floor(pageDists.length * 0.9)];
+  // the samples). Its texture sets the page flood tolerance. Lines are tried
+  // 3% and 0.8% in from the edge (a narrow margin puts the 3% lines inside the
+  // tiles); the 3% lines are kept unless they are clearly not page.
+  const sampleLines = (f) => {
+    const s = [];
+    const yTop = Math.round(H * f), xL = Math.round(W * f), xR = W - 1 - xL;
+    for (let x = Math.round(W * 0.05); x < W * 0.95; x += 2) s.push(px(x, yTop));
+    for (let y = Math.round(H * 0.05); y < H * 0.95; y += 2) s.push(px(xL, y), px(xR, y));
+    const col = [0, 1, 2].map((k) => median(s.map((p) => p[k])));
+    const d = s.map((p) => Math.hypot(p[0] - col[0], p[1] - col[1], p[2] - col[2])).sort((a, b) => a - b);
+    return { col, noise: d[Math.floor(d.length * 0.9)] };
+  };
+  let pageLine = sampleLines(0.03);
+  if (pageLine.noise > 30) { const edge = sampleLines(0.008); if (edge.noise < pageLine.noise) pageLine = edge; }
+  const page = pageLine.col;
+  const pageNoise = pageLine.noise;
   const pageTol = Math.min(MAX_TOL, Math.max(STRICT, pageNoise * 1.6));
   // Tiles: runs of rows/columns that are mostly not page-coloured.
   const bands = (length, count, probe) => {

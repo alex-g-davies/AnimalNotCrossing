@@ -42,6 +42,20 @@ export const ANIMALS = {
   pufferfish: { name: 'pufferfish', plural: 'pufferfish' },
   sealpup: { name: 'seal pup', plural: 'seal pups' },
   narwhal: { name: 'narwhal', plural: 'narwhals' },
+  // Chibi sheet (art/Kawaii Chibi Animal Icon Grid.png), same order. No pixel
+  // versions yet, so `pixel: false` shows the regular portrait in Valley too.
+  newfie: { name: 'newfie', plural: 'newfies', pixel: false },
+  leonberger: { name: 'leonberger', plural: 'leonbergers', pixel: false },
+  bernese: { name: 'Bernese', plural: 'Berneses', pixel: false },
+  golden: { name: 'golden retriever', plural: 'golden retrievers', pixel: false },
+  capybara: { name: 'capybara', plural: 'capybaras', pixel: false },
+  redpanda: { name: 'red panda', plural: 'red pandas', pixel: false },
+  otter: { name: 'otter', plural: 'otters', pixel: false },
+  sloth: { name: 'sloth', plural: 'sloths', pixel: false },
+  hippo: { name: 'hippo', plural: 'hippos', pixel: false },
+  bat: { name: 'bat', plural: 'bats', pixel: false },
+  alpaca: { name: 'alpaca', plural: 'alpacas', pixel: false },
+  hamster: { name: 'hamster', plural: 'hamsters', pixel: false },
   // Christmas sheets (art/Christmas Animal Grid.png and art/Valley Christmas
   // Grid.png), same order. Shown only with the Christmas colours; `base` names
   // the everyday animal a dressed-up one stands in for.
@@ -61,7 +75,9 @@ export const ANIMALS = {
 
 for (const [id, animal] of Object.entries(ANIMALS)) {
   animal.markup = `<img class="animal-img" src="img/animals/${id}.png" alt="" draggable="false">`;
-  animal.valleyMarkup = `<img class="animal-img" src="img/valley/${id}.png" alt="" draggable="false">`;
+  animal.valleyMarkup = animal.pixel === false
+    ? `<img class="animal-img smooth" src="img/animals/${id}.png" alt="" draggable="false">`
+    : `<img class="animal-img" src="img/valley/${id}.png" alt="" draggable="false">`;
 }
 
 export const DEFAULT_ANIMAL = 'cat';
