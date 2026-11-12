@@ -19,6 +19,13 @@ export const WIN_MESSAGES = [
   'Solved with style. You are my favourite puzzle too.',
   'Nice work. Thinking of you, always.',
   'You and logic: a love story. You and me: the sequel.',
+  'Solved! Every {animal} found a cosy spot, thanks to you.',
+  'Lovely work. Calm, clever and kind: the perfect puzzler.',
+  'Another board done. You are on a roll.',
+  'Every row, every column, every {animal}. Beautifully done.',
+  'Well played. I hope you are smiling right now.',
+  'All done! You make it look so easy.',
+  'Solved, and solved well. Treat yourself to something nice.',
 ];
 
 export const LOSS_MESSAGES = [
@@ -34,6 +41,11 @@ export const LOSS_MESSAGES = [
   'Even the best {animal} herders have off days. You are still the best.',
   'This one was stubborn. You are more stubborn. Go again.',
   'A miss is just a warm-up. Love you.',
+  'Not quite this time. Every puzzle teaches you something.',
+  'The {animals} will be waiting for a rematch. So will I.',
+  'That was a tough one. You will get the next.',
+  'So close. Take a breath and try a fresh board.',
+  'A small stumble. You are still doing wonderfully.',
 ];
 
 // Shuffled cycle through a list so no message repeats until all have shown.
